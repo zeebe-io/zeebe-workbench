@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>io.zeebe.workbench</groupId>
+	<artifactId>root</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<parent>
+		<groupId>org.camunda</groupId>
+		<artifactId>camunda-release-parent</artifactId>
+		<version>2.5</version>
+		<relativePath />
+	</parent>
+
+	<name>Zeebe Workbench Root</name>
+
+	<properties>
+		<zeebe.version>0.11.0</zeebe.version>
+		<version.java>1.8</version.java>
+		<scala.version>2.12.4</scala.version>
+		<scala.binary.version>2.12.4</scala.binary.version>
+		<encoding>UTF-8</encoding>
+		<project.build.sourceEncoding>${encoding}</project.build.sourceEncoding>
+		<project.build.resourceEncoding>${encoding}</project.build.resourceEncoding>
+	</properties>
+
+	<modules>
+		<module>test-runner</module>
+		<module>web-app</module>
+	</modules>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>io.zeebe.workbench</groupId>
+				<artifactId>test-runner</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+                        <dependency>
+				<groupId>io.zeebe</groupId>
+				<artifactId>zeebe-test</artifactId>
+				<version>${zeebe.version}</version>
+			</dependency>
+			
+			<dependency>
+				<groupId>io.zeebe</groupId>
+				<artifactId>zeebe-broker-core</artifactId>
+				<version>${zeebe.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>io.zeebe</groupId>
+				<artifactId>zeebe-client-java</artifactId>
+				<version>${zeebe.version}</version>
+			</dependency>
+
+
+			<dependency>
+				<groupId>org.scalatra</groupId>
+				<artifactId>scalatra_2.12</artifactId>
+				<version>2.6.2</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.scalatra</groupId>
+				<artifactId>scalatra-json_2.12</artifactId>
+				<version>2.6.2</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.scalatra</groupId>
+				<artifactId>scalatra-scalatest_2.12</artifactId>
+				<version>2.6.2</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.json4s</groupId>
+				<artifactId>json4s-jackson_2.12</artifactId>
+				<version>3.5.2</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.eclipse.jetty</groupId>
+				<artifactId>jetty-webapp</artifactId>
+				<version>9.4.8.v20171121</version>
+			</dependency>
+
+			<dependency>
+				<groupId>javax.servlet</groupId>
+				<artifactId>javax.servlet-api</artifactId>
+				<version>3.1.0</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.scalatest</groupId>
+				<artifactId>scalatest_2.12</artifactId>
+				<version>3.0.4</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-api</artifactId>
+				<version>1.7.25</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-api</artifactId>
+				<version>2.9.0</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-core</artifactId>
+				<version>2.9.0</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-slf4j-impl</artifactId>
+				<version>2.9.0</version>
+			</dependency>
+
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+		<defaultGoal>clean install</defaultGoal>
+
+		<plugins>
+
+			<plugin>
+				<groupId>net.alchim31.maven</groupId>
+				<artifactId>scala-maven-plugin</artifactId>
+				<version>3.2.1</version>
+				<configuration>
+					<scalaCompatVersion>${scala.binary.version}</scalaCompatVersion>
+					<scalaVersion>${scala.version}</scalaVersion>
+				</configuration>
+				<executions>
+					<execution>
+						<id>scala-compile-first</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>add-source</goal>
+							<goal>compile</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>scala-test-compile</id>
+						<phase>process-test-resources</phase>
+						<goals>
+							<goal>testCompile</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>scala-doc</id>
+						<phase>package</phase>
+						<goals>
+							<goal>doc-jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<skipTests>true</skipTests>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.scalatest</groupId>
+				<artifactId>scalatest-maven-plugin</artifactId>
+				<version>1.0</version>
+				<configuration>
+					<reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+					<junitxml>.</junitxml>
+					<filereports>TestSuite.txt</filereports>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.antipathy</groupId>
+				<artifactId>mvn-scalafmt_2.12</artifactId>
+				<version>0.7_1.5.1</version>
+				<configuration>
+				    <parameters>--diff</parameters>
+				  </configuration>
+				<executions>
+					<execution>
+						<phase>validate</phase>
+						<goals>
+							<goal>format</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+
+	</build>
+
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+		</license>
+	</licenses>
+
+	<scm>
+        <connection>scm:git:git@github.com:zeebe/zeebe-workbench.git</connection>
+        <url>scm:git:git@github.com:zeebe/zeebe-workbench.git</url>
+        <developerConnection>scm:git:git@github.com:zeebe/zeebe-workbench.git</developerConnection>
+        <tag>1.0.0</tag>
+    </scm>
+
+	<distributionManagement>
+		<repository>
+			<id>camunda-nexus</id>
+			<name>camunda bpm community extensions</name>
+			<url>https://app.camunda.com/nexus/content/repositories/camunda-bpm-community-extensions</url>
+		</repository>
+		<snapshotRepository>
+			<id>camunda-nexus</id>
+			<name>camunda bpm community extensions snapshots</name>
+			<url>https://app.camunda.com/nexus/content/repositories/camunda-bpm-community-extensions-snapshots</url>
+			<!-- for maven 2 compatibility -->
+			<uniqueVersion>true</uniqueVersion>
+		</snapshotRepository>
+	</distributionManagement>
+
+</project>
