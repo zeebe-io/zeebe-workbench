@@ -1,0 +1,58 @@
+html, body, #canvas, #canvas > div {
+   height: 100%;
+   margin: 0;
+ }
+
+ body {
+   display: flex;
+   flex-direction: row;
+   font-family: 'Arial', sans-serif;
+ }
+
+ #canvas {
+   flex-grow: 2;
+ }
+
+ #history {
+   min-width: 200px;
+   border-left: solid 1px #ddd;
+ }
+
+ #history .entry {
+   padding: 10px;
+   font-family: 'Arial', sans-serif;
+   font-size: 12px;
+
+ }
+
+ #history .entry:hover,
+ #history .entry.active {
+   background-color: #ddd;
+   cursor: pointer;
+ }
+
+ .token-count {
+   background-color: #FAFAFA;
+   border-radius: 100%;
+   box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+   width: 25px;
+   height: 25px;
+   line-height: 25px;
+   text-align: center;
+   font-size: 16px;
+   color: white; /** #000; **/
+   user-select: none;
+   animation: jump 1s infinite;
+   animation-timing-function: ease;
+   position: relative;
+   top: 0;
+ }
+
+ .token-count.waiting {
+   background-color: #0d8dba; /** #FAFAFA; **/
+ }
+
+ @keyframes jump {
+   50% { top: 5px; }
+ }
+

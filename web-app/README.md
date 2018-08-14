@@ -1,12 +1,19 @@
-NPM:
+
+
+
+Install the project JS dependencies via:
 > npm install
 
-> npm run all
-
+For development
 > npm run dev
 
+For bundling_
+> npm run all
 
-SBT:
-> ~;webApp/jetty:stop;jetty:start
+Start the server for development
+> sbt ~;webApp/jetty:stop;jetty:start
+
+Install with SBT
+> sbt webApp/assembly
 
 

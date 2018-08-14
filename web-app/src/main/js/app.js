@@ -1,6 +1,13 @@
 // we use stringify to inline an example XML document
-import pizzaDiagram from '../resources/orderProcess.bpmn';
+import diagram from '../resources/orderProcess.bpmn';
 
+//make sure you added bpmn-js to your your project
+//dependencies via npm install --save bpmn-js
+import BpmnViewer from 'bpmn-js/lib/NavigatedViewer';
+
+import AnimationModule from "./bpmn-js";
+
+import { queryAll as domQueryAll } from 'min-dom';
 
 const history = [
   { activitId: 'order-placed' },   // start event
@@ -8,7 +15,7 @@ const history = [
   { activitId: 'collect-money' }    // activitId
 ]
 
-import { queryAll as domQueryAll } from 'min-dom';
+// --- functions
 
 function renderHistory(animation, elementRegistry, tokenCount) {
   const $history = document.getElementById("history");
@@ -57,11 +64,7 @@ function renderHistory(animation, elementRegistry, tokenCount) {
   });
 }
 
-// make sure you added bpmn-js to your your project
-// dependencies via npm install --save bpmn-js
-import BpmnViewer from 'bpmn-js/lib/NavigatedViewer';
-
-import AnimationModule from "./custom";
+// --- 
 
 var viewer = new BpmnViewer({
   container: '#canvas',
@@ -70,7 +73,7 @@ var viewer = new BpmnViewer({
   ]
 });
 
-viewer.importXML(pizzaDiagram, function(err) {
+viewer.importXML(diagram, function(err) {
 
 
  if (!err) {

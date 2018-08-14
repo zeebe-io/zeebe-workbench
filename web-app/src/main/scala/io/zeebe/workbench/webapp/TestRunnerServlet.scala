@@ -40,6 +40,12 @@ class TestRunnerServlet
     ssp("index", "foo" -> "bar")
   }
 
+  get("/bpmn-js-test") {
+    contentType = "text/html"
+
+    ssp("bpmn-js-test")
+  }
+
   // REST endpoints
 
 }
