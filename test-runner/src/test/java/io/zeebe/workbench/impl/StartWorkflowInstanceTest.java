@@ -2,6 +2,8 @@ package io.zeebe.workbench.impl;
 
 import io.zeebe.gateway.ZeebeClient;
 import io.zeebe.gateway.api.clients.TopicClient;
+import io.zeebe.gateway.api.commands.WorkflowInstanceCommand;
+import io.zeebe.gateway.api.commands.WorkflowInstanceCommandName;
 import io.zeebe.gateway.api.events.WorkflowInstanceEvent;
 import io.zeebe.gateway.api.events.WorkflowInstanceState;
 import io.zeebe.model.bpmn.Bpmn;
@@ -50,23 +52,43 @@ public class StartWorkflowInstanceTest {
     runner.run(resource, testCase);
 
     // then
-    final CountDownLatch latch = new CountDownLatch(1);
+    final CountDownLatch latch = new CountDownLatch(8);
 
     final List<WorkflowInstanceEvent> events = new ArrayList<>();
+    final List<WorkflowInstanceCommand> commands = new ArrayList<>();
+
     final ZeebeClient zeebeClient = ZeebeClient.newClient();
     final TopicClient topicClient = zeebeClient.topicClient();
-    topicClient.newSubscription().name("subscription").workflowInstanceEventHandler(workflowInstanceEvent -> {
-      latch.countDown();
-      events.add(workflowInstanceEvent);
-    });
+    topicClient
+        .newSubscription()
+        .name("subscription")
+        .workflowInstanceEventHandler(
+            workflowInstanceEvent -> {
+              latch.countDown();
+              events.add(workflowInstanceEvent);
+            })
+        .workflowInstanceCommandHandler(
+            command -> {
+              latch.countDown();
+              commands.add(command);
+            })
+        .open();
 
     latch.await(15, TimeUnit.SECONDS);
 
-    assertThat(events.size()).isGreaterThan(1);
+    assertThat(commands.size()).isEqualTo(1);
+    assertThat(commands.stream().map(e -> e.getName()))
+        .containsExactly(WorkflowInstanceCommandName.CREATE);
 
+    assertThat(events.size()).isEqualTo(7);
     assertThat(events.stream().map(e -> e.getState()))
-      .contains(WorkflowInstanceState.CREATED,
-                WorkflowInstanceState.ELEMENT_ACTIVATED);
-
+        .contains(
+            WorkflowInstanceState.CREATED,
+            WorkflowInstanceState.ELEMENT_READY,
+            WorkflowInstanceState.ELEMENT_ACTIVATED,
+            WorkflowInstanceState.START_EVENT_OCCURRED,
+            WorkflowInstanceState.SEQUENCE_FLOW_TAKEN,
+            WorkflowInstanceState.ELEMENT_READY,
+            WorkflowInstanceState.ELEMENT_ACTIVATED);
   }
 }
