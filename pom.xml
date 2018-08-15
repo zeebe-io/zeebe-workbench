@@ -54,7 +54,7 @@
 
 			<dependency>
 				<groupId>io.zeebe</groupId>
-				<artifactId>zeebe-client-java</artifactId>
+				<artifactId>zeebe-gateway</artifactId>
 				<version>${zeebe.version}</version>
 			</dependency>
 

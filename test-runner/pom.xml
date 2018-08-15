@@ -15,7 +15,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>io.zeebe</groupId>
-			<artifactId>zeebe-client-java</artifactId>
+			<artifactId>zeebe-gateway</artifactId>
 		</dependency>
 
 		<dependency>
@@ -47,8 +47,8 @@
 		<dependency>
 			<groupId>io.zeebe</groupId>
 			<artifactId>zeebe-broker-core</artifactId>
-			<scope>test</scope>
 		</dependency>
+
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
