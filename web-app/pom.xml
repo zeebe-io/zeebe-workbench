@@ -17,32 +17,7 @@
       <groupId>io.zeebe.workbench</groupId>
       <artifactId>test-runner</artifactId>
     </dependency>
-    
-    <dependency>
-	    <groupId>org.scalatra</groupId>
-	    <artifactId>scalatra_2.12</artifactId>
-	</dependency>
-	
-	<dependency>
-	    <groupId>org.scalatra</groupId>
-	    <artifactId>scalatra-json_2.12</artifactId>
-	</dependency>
-	
-	<dependency>
-	    <groupId>org.json4s</groupId>
-	    <artifactId>json4s-jackson_2.12</artifactId>
-	</dependency>
-	
-	<dependency>
-		<groupId>javax.servlet</groupId>
-	    <artifactId>javax.servlet-api</artifactId>
-	</dependency>
-	
-	<dependency>
-		<groupId>org.eclipse.jetty</groupId>
-	    <artifactId>jetty-webapp</artifactId>
-	</dependency>
-    
+
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
@@ -69,15 +44,54 @@
 	    <scope>test</scope>
 	</dependency>
 
-    <dependency>
-      <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_2.12</artifactId>
-      <scope>test</scope>
-    </dependency>
-    
+      <dependency>
+          <groupId>org.scalatra</groupId>
+          <artifactId>scalatra_2.12</artifactId>
+          <version>2.6.2</version>
+      </dependency>
+
+      <dependency>
+          <groupId>org.scalatra</groupId>
+          <artifactId>scalatra-json_2.12</artifactId>
+          <version>2.6.2</version>
+      </dependency>
+
+      <dependency>
+          <groupId>org.scalatra</groupId>
+          <artifactId>scalatra-scalatest_2.12</artifactId>
+          <version>2.6.2</version>
+      </dependency>
+
+      <dependency>
+          <groupId>org.json4s</groupId>
+          <artifactId>json4s-jackson_2.12</artifactId>
+          <version>3.5.2</version>
+      </dependency>
+
+      <dependency>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-webapp</artifactId>
+          <version>9.4.8.v20171121</version>
+      </dependency>
+
+      <dependency>
+          <groupId>javax.servlet</groupId>
+          <artifactId>javax.servlet-api</artifactId>
+          <version>3.1.0</version>
+      </dependency>
+
+      <dependency>
+          <groupId>org.scalatest</groupId>
+          <artifactId>scalatest_2.12</artifactId>
+          <version>3.0.4</version>
+          <scope>test</scope>
+      </dependency>
+
   </dependencies>
 
   <build>
+    <defaultGoal>clean install</defaultGoal>
+
     <plugins>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
@@ -114,6 +128,78 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>3.2.1</version>
+        <configuration>
+          <scalaCompatVersion>${scala.binary.version}</scalaCompatVersion>
+          <scalaVersion>${scala.version}</scalaVersion>
+        </configuration>
+        <executions>
+          <execution>
+            <id>scala-compile-first</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>add-source</goal>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>scala-test-compile</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>scala-doc</id>
+            <phase>package</phase>
+            <goals>
+              <goal>doc-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.7</version>
+        <configuration>
+          <skipTests>true</skipTests>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest-maven-plugin</artifactId>
+        <version>1.0</version>
+        <configuration>
+          <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+          <junitxml>.</junitxml>
+          <filereports>TestSuite.txt</filereports>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.antipathy</groupId>
+        <artifactId>mvn-scalafmt_2.12</artifactId>
+        <version>0.7_1.5.1</version>
+        <configuration>
+          <parameters>--diff</parameters>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>format</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
     </plugins>
   </build>
 

@@ -29,7 +29,7 @@ public class TestRunner implements Runner {
 
   private List<TestResult> runTests(List<TestCase> cases)
   {
-    final List<TestResult> results = new ArrayList<>()
+    final List<TestResult> results = new ArrayList<>();
     for (TestCase testCase : cases)
     {
       runTest(testCase);
