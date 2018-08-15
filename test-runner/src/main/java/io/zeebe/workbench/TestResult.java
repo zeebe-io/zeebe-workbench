@@ -1,22 +1,23 @@
 package io.zeebe.workbench;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class TestResult {
 
   private final String name;
-  private final List<FailedVerification> failedVerifications;
+  private final List<FailedVerification> failedVerifications = new ArrayList<>();
 
-  public TestResult(String name, List<FailedVerification> failedVerifications) {
+  public TestResult(String name) {
     this.name = name;
-    this.failedVerifications = failedVerifications;
   }
 
   public String getName() {
     return name;
   }
 
-  public List<FailedVerification> getFailedVerifications() {
-    return failedVerifications;
+  public void addFailedVerification(FailedVerification failedVerification)
+  {
+    failedVerifications.add(failedVerification);
   }
 }
