@@ -15,8 +15,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -44,7 +44,7 @@ public class StartWorkflowInstanceTest {
   }
 
   @Test
-  public void shouldDeployWorkflow() throws Exception {
+  public void shouldStartWorkflowInstance() throws Exception {
     // given
     final TestCase testCase = new TestCase("test1", "PROCESS", null, null, null);
 
@@ -54,8 +54,8 @@ public class StartWorkflowInstanceTest {
     // then
     final CountDownLatch latch = new CountDownLatch(8);
 
-    final List<WorkflowInstanceEvent> events = new ArrayList<>();
-    final List<WorkflowInstanceCommand> commands = new ArrayList<>();
+    final List<WorkflowInstanceEvent> events = new CopyOnWriteArrayList<>();
+    final List<WorkflowInstanceCommand> commands = new CopyOnWriteArrayList<>();
 
     final ZeebeClient zeebeClient = ZeebeClient.newClient();
     final TopicClient topicClient = zeebeClient.topicClient();
@@ -64,13 +64,13 @@ public class StartWorkflowInstanceTest {
         .name("subscription")
         .workflowInstanceEventHandler(
             workflowInstanceEvent -> {
-              latch.countDown();
               events.add(workflowInstanceEvent);
+              latch.countDown();
             })
         .workflowInstanceCommandHandler(
             command -> {
-              latch.countDown();
               commands.add(command);
+              latch.countDown();
             })
         .open();
 
@@ -82,7 +82,7 @@ public class StartWorkflowInstanceTest {
 
     assertThat(events.size()).isEqualTo(7);
     assertThat(events.stream().map(e -> e.getState()))
-        .contains(
+        .containsExactly(
             WorkflowInstanceState.CREATED,
             WorkflowInstanceState.ELEMENT_READY,
             WorkflowInstanceState.ELEMENT_ACTIVATED,
@@ -90,5 +90,39 @@ public class StartWorkflowInstanceTest {
             WorkflowInstanceState.SEQUENCE_FLOW_TAKEN,
             WorkflowInstanceState.ELEMENT_READY,
             WorkflowInstanceState.ELEMENT_ACTIVATED);
+  }
+
+  @Test
+  public void shouldStartWorkflowInstanceWithPayload() throws Exception {
+    // given
+    final String startPayload = "{\"foo\":3}";
+    final TestCase testCase = new TestCase("test1", "PROCESS", startPayload, null, null);
+
+    // when
+    runner.run(resource, testCase);
+
+    // then
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    final List<WorkflowInstanceEvent> events = new CopyOnWriteArrayList<>();
+
+    final ZeebeClient zeebeClient = ZeebeClient.newClient();
+    final TopicClient topicClient = zeebeClient.topicClient();
+    topicClient
+        .newSubscription()
+        .name("subscription1")
+        .workflowInstanceEventHandler(
+            workflowInstanceEvent -> {
+              events.add(workflowInstanceEvent);
+              latch.countDown();
+            })
+        .open();
+
+    latch.await(15, TimeUnit.SECONDS);
+
+    final WorkflowInstanceEvent workflowInstanceEvent = events.get(0);
+
+    assertThat(workflowInstanceEvent.getState()).isEqualTo(WorkflowInstanceState.CREATED);
+    assertThat(workflowInstanceEvent.getPayload()).isEqualTo(startPayload);
   }
 }
