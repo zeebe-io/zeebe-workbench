@@ -11,10 +11,11 @@ import io.zeebe.workbench.*;
 
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-public class TestRunner implements Runner {
+public class TestRunner implements Runner, AutoCloseable {
 
   private final String tempFolder;
   private final Broker broker;
@@ -39,6 +40,11 @@ public class TestRunner implements Runner {
       throw new IllegalStateException("Broker start does not work.");
     }
     topicClient = zeebeClient.topicClient();
+  }
+
+  @Override
+  public List<TestResult> run(WorkflowResource resources, TestCase cases) {
+    return run(Collections.singletonList(resources), Collections.singletonList(cases));
   }
 
   @Override
@@ -79,18 +85,37 @@ public class TestRunner implements Runner {
     final String startPayload = testCase.getStartPayload();
 
     // TODO start workflow instance with given payLoad
+    topicClient
+        .workflowClient()
+        .newCreateInstanceCommand()
+        .bpmnProcessId(resourceName)
+        .latestVersion()
+        .payload(testCase.getStartPayload())
+        .send()
+        .join();
 
     final List<Command> commands = testCase.getCommands();
+    if (commands != null && !commands.isEmpty()) {
 
-    // TODO run complete job commands
+      // TODO run complete job commands
 
-    // TODO verify current state
+    }
+
     final List<Verification> verifications = testCase.getVerifications();
-    for (Verification verification : verifications) {
-      // TODO verify expected state
-      // TODO add failed verification on failed verification
+    if (commands != null && !commands.isEmpty()) {
+      // TODO verify current state
+      for (Verification verification : verifications) {
+        // TODO verify expected state
+        // TODO add failed verification on failed verification
+      }
     }
 
     return result;
+  }
+
+  @Override
+  public void close() throws Exception {
+    zeebeClient.close();
+    broker.close();
   }
 }
