@@ -2,8 +2,10 @@ package io.zeebe.workbench.impl;
 
 import io.zeebe.broker.Broker;
 import io.zeebe.broker.system.configuration.BrokerCfg;
+import io.zeebe.broker.system.configuration.TopicCfg;
 import io.zeebe.gateway.ZeebeClient;
 import io.zeebe.gateway.api.clients.TopicClient;
+import io.zeebe.protocol.Protocol;
 import io.zeebe.util.sched.clock.ActorClock;
 import io.zeebe.workbench.*;
 
@@ -26,6 +28,11 @@ public class TestRunner implements Runner {
     try {
       tempFolder = Files.createTempDirectory("zeebe").toAbsolutePath().normalize().toString();
       BrokerCfg cfg = new BrokerCfg();
+      final TopicCfg defaultTopic = new TopicCfg();
+      defaultTopic.setName(Protocol.DEFAULT_TOPIC);
+      defaultTopic.setPartitions(1);
+      defaultTopic.setReplicationFactor(1);
+      cfg.getTopics().add(defaultTopic);
       cfg.setBootstrap(1);
       broker = new Broker(cfg, tempFolder, (ActorClock) null);
     } catch (Exception ex) {
@@ -56,8 +63,10 @@ public class TestRunner implements Runner {
 
   private List<TestResult> runTests(List<TestCase> cases) {
     final List<TestResult> results = new ArrayList<>();
-    for (TestCase testCase : cases) {
-      runTest(testCase);
+    if (cases != null && !cases.isEmpty()) {
+      for (TestCase testCase : cases) {
+        runTest(testCase);
+      }
     }
     return results;
   }
