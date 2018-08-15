@@ -23,6 +23,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 
 public class CompleteJobCommandTest {
 
@@ -108,5 +109,50 @@ public class CompleteJobCommandTest {
             WorkflowInstanceState.END_EVENT_OCCURRED,
             WorkflowInstanceState.ELEMENT_COMPLETING,
             WorkflowInstanceState.ELEMENT_COMPLETED);
+  }
+
+  @Test
+  public void shouldCompleteJobWithPayload() throws Exception {
+    // given
+    final String startPayload = "{\"foo\":3}";
+    final String completePayload = "{\"bar\":-1}";
+
+    final Command command = new Command("serviceTask", completePayload);
+    final TestCase testCase =
+        new TestCase(
+            "test1", "process.bpmn", startPayload, Collections.singletonList(command), null);
+
+    // when
+    runner.run(resource, testCase);
+
+    // then
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    final List<WorkflowInstanceEvent> events = new CopyOnWriteArrayList<>();
+
+    final ZeebeClient zeebeClient = ZeebeClient.newClient();
+    final TopicClient topicClient = zeebeClient.topicClient();
+    topicClient
+        .newSubscription()
+        .name("subscription3")
+        .workflowInstanceEventHandler(
+            workflowInstanceEvent -> {
+              events.add(workflowInstanceEvent);
+
+              if (workflowInstanceEvent.getState() == WorkflowInstanceState.ELEMENT_COMPLETED
+                  && workflowInstanceEvent
+                      .getActivityId()
+                      .equals(workflowInstanceEvent.getBpmnProcessId())) {
+                latch.countDown();
+              }
+            })
+        .open();
+
+    latch.await(5, TimeUnit.SECONDS);
+
+    final WorkflowInstanceEvent workflowInstanceEvent = events.get(events.size() - 1);
+    assertThat(workflowInstanceEvent.getState()).isEqualTo(WorkflowInstanceState.ELEMENT_COMPLETED);
+    assertThat(workflowInstanceEvent.getPayloadAsMap())
+        .containsExactly(entry("foo", 3), entry("bar", -1));
   }
 }
