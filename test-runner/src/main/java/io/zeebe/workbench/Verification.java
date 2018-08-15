@@ -14,12 +14,6 @@ public class Verification {
     this.activityId = activityId;
   }
 
-  public Verification(String expectedIntent, String expectedPayload) {
-    this.expectedIntent = expectedIntent;
-    this.expectedPayload = expectedPayload;
-    this.activityId = null;
-  }
-
   public String getExpectedIntent() {
     return expectedIntent;
   }

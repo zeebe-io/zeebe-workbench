@@ -1,10 +1,14 @@
 package io.zeebe.workbench.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.zeebe.broker.Broker;
 import io.zeebe.broker.system.configuration.BrokerCfg;
 import io.zeebe.broker.system.configuration.TopicCfg;
 import io.zeebe.gateway.ZeebeClient;
 import io.zeebe.gateway.api.clients.TopicClient;
+import io.zeebe.gateway.api.events.WorkflowInstanceEvent;
+import io.zeebe.gateway.api.events.WorkflowInstanceState;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.BpmnModelInstance;
 import io.zeebe.model.bpmn.instance.Process;
@@ -18,17 +22,18 @@ import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class TestRunner implements Runner, AutoCloseable {
 
   private final String tempFolder;
   private final Broker broker;
 
+  private final ObjectMapper objectMapper = new ObjectMapper();
   private final ZeebeClient zeebeClient = ZeebeClient.newClient();
   private final TopicClient topicClient;
 
@@ -80,7 +85,8 @@ public class TestRunner implements Runner, AutoCloseable {
     final List<TestResult> results = new ArrayList<>();
     if (cases != null && !cases.isEmpty()) {
       for (TestCase testCase : cases) {
-        runTest(testCase);
+        final TestResult testResult = runTest(testCase);
+        results.add(testResult);
       }
     }
     return results;
@@ -103,7 +109,6 @@ public class TestRunner implements Runner, AutoCloseable {
     final String bpmnProcessId = process.getId();
     final String startPayload = testCase.getStartPayload();
 
-    // TODO start workflow instance with given payLoad
     topicClient
         .workflowClient()
         .newCreateInstanceCommand()
@@ -114,6 +119,84 @@ public class TestRunner implements Runner, AutoCloseable {
         .join();
 
     final List<Command> commands = testCase.getCommands();
+    executeCommands(bpmnModelInstance, commands);
+
+    final List<Verification> verifications = testCase.getVerifications();
+    final List<FailedVerification> failedVerifications =
+        evaluateVerifications(testCase, verifications);
+    result.addFailedVerfifications(failedVerifications);
+
+    return result;
+  }
+
+  private List<FailedVerification> evaluateVerifications(
+      TestCase testCase, List<Verification> verifications) {
+    List<FailedVerification> failedVerifications = null;
+    if (verifications != null && !verifications.isEmpty()) {
+      try {
+        failedVerifications = verify(testCase, verifications);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return failedVerifications;
+  }
+
+  private List<FailedVerification> verify(TestCase testCase, List<Verification> verifications)
+      throws InterruptedException {
+    final Map<String, Verification> verificationMap =
+        verifications.stream().collect(Collectors.toMap(v -> v.getActivityId(), v -> v));
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final List<WorkflowInstanceEvent> events = new CopyOnWriteArrayList<>();
+    final List<FailedVerification> failedVerifications = new CopyOnWriteArrayList<>();
+
+    topicClient
+        .newSubscription()
+        .name(testCase.getName())
+        .workflowInstanceEventHandler(
+            workflowInstanceEvent -> {
+              final Verification verification =
+                  verificationMap.get(workflowInstanceEvent.getActivityId());
+
+              if (verification != null) {
+                final WorkflowInstanceState state = workflowInstanceEvent.getState();
+                if (verification.getExpectedIntent().equalsIgnoreCase(state.name())) {
+                  final JsonNode expectedPayload =
+                      objectMapper.readTree(verification.getExpectedPayload());
+                  final JsonNode actualPayload =
+                      objectMapper.readTree(workflowInstanceEvent.getPayload());
+
+                  if (!expectedPayload.equals(actualPayload)) {
+                    final FailedVerification failedVerification =
+                        new FailedVerification(verification, workflowInstanceEvent.getPayload());
+                    failedVerifications.add(failedVerification);
+                  }
+
+                  verificationMap.remove(workflowInstanceEvent.getActivityId());
+                }
+              }
+
+              events.add(workflowInstanceEvent);
+
+              if (workflowInstanceEvent.getState() == WorkflowInstanceState.ELEMENT_COMPLETED
+                  && workflowInstanceEvent
+                      .getActivityId()
+                      .equals(workflowInstanceEvent.getBpmnProcessId())) {
+                latch.countDown();
+              }
+            });
+
+    latch.await(5, TimeUnit.SECONDS);
+
+    final Collection<Verification> remainingVerifications = verificationMap.values();
+    for (Verification verification : remainingVerifications) {
+      failedVerifications.add(new FailedVerification(verification, null));
+    }
+    return failedVerifications;
+  }
+
+  private void executeCommands(BpmnModelInstance bpmnModelInstance, List<Command> commands) {
     if (commands != null && !commands.isEmpty()) {
 
       for (Command cmd : commands) {
@@ -124,17 +207,6 @@ public class TestRunner implements Runner, AutoCloseable {
         }
       }
     }
-
-    final List<Verification> verifications = testCase.getVerifications();
-    if (verifications != null && !verifications.isEmpty()) {
-      // TODO verify current state
-      for (Verification verification : verifications) {
-        // TODO verify expected state
-        // TODO add failed verification on failed verification
-      }
-    }
-
-    return result;
   }
 
   private void executeCommand(BpmnModelInstance bpmnModelInstance, Command cmd)

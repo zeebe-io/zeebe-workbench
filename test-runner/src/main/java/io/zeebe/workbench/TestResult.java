@@ -16,8 +16,11 @@ public class TestResult {
     return name;
   }
 
-  public void addFailedVerification(FailedVerification failedVerification)
-  {
-    failedVerifications.add(failedVerification);
+  public List<FailedVerification> getFailedVerifications() {
+    return failedVerifications;
+  }
+
+  public void addFailedVerfifications(List<FailedVerification> failedVerifications) {
+    this.failedVerifications.addAll(failedVerifications);
   }
 }

@@ -2,33 +2,19 @@ package io.zeebe.workbench;
 
 public class FailedVerification {
 
-  private final String expectedIntent;
-
-  private final String expectedPayload;
+  private final Verification verification;
   private final String actualPayLoad;
 
-  private final String activityId;
-
-  public FailedVerification(String expectedIntent, String expectedPayload, String actualPayLoad, String activityId) {
-    this.expectedIntent = expectedIntent;
-    this.expectedPayload = expectedPayload;
+  public FailedVerification(Verification verification, String actualPayLoad) {
+    this.verification = verification;
     this.actualPayLoad = actualPayLoad;
-    this.activityId = activityId;
   }
 
-  public String getExpectedIntent() {
-    return expectedIntent;
-  }
-
-  public String getExpectedPayload() {
-    return expectedPayload;
+  public Verification getVerification() {
+    return verification;
   }
 
   public String getActualPayLoad() {
     return actualPayLoad;
-  }
-
-  public String getActivityId() {
-    return activityId;
   }
 }
