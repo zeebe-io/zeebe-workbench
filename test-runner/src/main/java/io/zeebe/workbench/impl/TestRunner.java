@@ -5,15 +5,24 @@ import io.zeebe.broker.system.configuration.BrokerCfg;
 import io.zeebe.broker.system.configuration.TopicCfg;
 import io.zeebe.gateway.ZeebeClient;
 import io.zeebe.gateway.api.clients.TopicClient;
+import io.zeebe.model.bpmn.Bpmn;
+import io.zeebe.model.bpmn.BpmnModelInstance;
+import io.zeebe.model.bpmn.instance.Process;
+import io.zeebe.model.bpmn.instance.ServiceTask;
+import io.zeebe.model.bpmn.instance.zeebe.ZeebeTaskDefinition;
 import io.zeebe.protocol.Protocol;
 import io.zeebe.util.sched.clock.ActorClock;
 import io.zeebe.workbench.*;
+import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 public class TestRunner implements Runner, AutoCloseable {
 
@@ -82,27 +91,42 @@ public class TestRunner implements Runner, AutoCloseable {
 
     final String resourceName = testCase.getResourceName();
     final WorkflowResource resource = deployedResources.get(resourceName);
+    final InputStream inputStream = new ByteArrayInputStream(resource.getResource());
+    final BpmnModelInstance bpmnModelInstance = Bpmn.readModelFromStream(inputStream);
+    final Process process =
+        bpmnModelInstance
+            .getDefinitions()
+            .getChildElementsByType(Process.class)
+            .stream()
+            .findFirst()
+            .get();
+    final String bpmnProcessId = process.getId();
     final String startPayload = testCase.getStartPayload();
 
     // TODO start workflow instance with given payLoad
     topicClient
         .workflowClient()
         .newCreateInstanceCommand()
-        .bpmnProcessId(resourceName)
+        .bpmnProcessId(bpmnProcessId)
         .latestVersion()
-        .payload(testCase.getStartPayload())
+        .payload(startPayload)
         .send()
         .join();
 
     final List<Command> commands = testCase.getCommands();
     if (commands != null && !commands.isEmpty()) {
 
-      // TODO run complete job commands
-
+      for (Command cmd : commands) {
+        try {
+          executeCommand(bpmnModelInstance, cmd);
+        } catch (InterruptedException ite) {
+          throw new RuntimeException(ite);
+        }
+      }
     }
 
     final List<Verification> verifications = testCase.getVerifications();
-    if (commands != null && !commands.isEmpty()) {
+    if (verifications != null && !verifications.isEmpty()) {
       // TODO verify current state
       for (Verification verification : verifications) {
         // TODO verify expected state
@@ -111,6 +135,41 @@ public class TestRunner implements Runner, AutoCloseable {
     }
 
     return result;
+  }
+
+  private void executeCommand(BpmnModelInstance bpmnModelInstance, Command cmd)
+      throws InterruptedException {
+    final ModelElementInstance modelElementById =
+        bpmnModelInstance.getModelElementById(cmd.getActivityId());
+
+    if (modelElementById instanceof ServiceTask) {
+      final CountDownLatch latch = new CountDownLatch(1);
+      final ServiceTask serviceTask = (ServiceTask) modelElementById;
+
+      final ZeebeTaskDefinition zeebeTaskDefinition =
+          serviceTask
+              .getExtensionElements()
+              .getElementsQuery()
+              .filterByType(ZeebeTaskDefinition.class)
+              .singleResult();
+      final String taskType = zeebeTaskDefinition.getType();
+
+      topicClient
+          .jobClient()
+          .newWorker()
+          .jobType(taskType)
+          .handler(
+              (jobClient, jobEvent) -> {
+                latch.countDown();
+                jobClient.newCompleteCommand(jobEvent).payload(cmd.getPayload()).send().join();
+              })
+          .open();
+
+      latch.await();
+
+    } else {
+      throw new IllegalArgumentException("Only service tasks are currently supported.");
+    }
   }
 
   @Override
