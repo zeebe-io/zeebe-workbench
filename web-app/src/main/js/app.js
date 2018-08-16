@@ -15,6 +15,7 @@ import $ from "jquery";
 
 var tests = [];
 var currentTest = null;
+var testResults = [];
 
 var openOverlay = '';
 
@@ -27,9 +28,15 @@ function createNewTestCase() {
   const $testCases = document.getElementById("testCases");
   const $newTestCase = document.createElement("div");
 
+  const $status = document.createElement("span");
   const $testName = document.createElement("span");
   const $runSingleTest = document.createElement("span");
   const $removeTest = document.createElement("span");
+
+  $newTestCase.testName = $name.value;
+
+  $status.classList.add("col");
+  $status.classList.add("status");
 
   $testName.innerHTML = $name.value;
   $testName.classList.add("col");
@@ -39,13 +46,14 @@ function createNewTestCase() {
   $runSingleTest.classList.add("col");
   $runSingleTest.classList.add("run-single-test");
 
-  $removeTest.innerHTML = "✕";
+  $removeTest.innerHTML = "🗑";
   $removeTest.classList.add("col");
   $removeTest.classList.add("remove-test");
 
   $("#testCases>div>span.active").removeClass("active");
   $testName.classList.add("active");
 
+  $newTestCase.appendChild($status);
   $newTestCase.appendChild($testName);
   $newTestCase.appendChild($runSingleTest);
   $newTestCase.appendChild($removeTest);
@@ -272,6 +280,15 @@ function renderTestCase(testCase) {
   testCase.verifications.forEach(v => {
     const $newVerification = document.createElement("div");
 
+    if (window.testResults.filter(r => r.name == testCase.name).length > 0) {
+      const result = window.testResults.filter(r => r.name == testCase.name)[0];
+
+      if (result.failedVerifications.filter(f => f.activityId == v.activityId).length > 0) {
+
+        $newVerification.classList.add("failed-test");
+      }
+    }
+
     $newVerification.innerHTML = "Verify '" + v.activityId + "' is completed with payload: " + v.expectedPayload;
     $commands.appendChild($newVerification);
   });
@@ -299,19 +316,43 @@ document.getElementById("runTestsButton")
         .addEventListener("click", () => runTestCases(tests));
 
 function showTestResults(results) {
+  window.testResults = results;
+
   const $testRuns = document.getElementById("testRuns");
   const $testFailures = document.getElementById("testFailures");
   const $progressSuccess = document.getElementById("testResultProgressSuccess");
   const $progressFailures = document.getElementById("testResultProgressFailures");
 
+  const successfulTests = results.filter(r => r.failedVerifications.length == 0);
+  const failedTests = results.filter(r => r.failedVerifications.length > 0);
+
   const runs = results.length;
-  const failures = results.filter(r => r.failedVerifications.length > 0).length;
+  const failures = failedTests.length;
 
   $testRuns.innerHTML = runs;
   $testFailures.innerHTML = failures;
 
   $progressSuccess.style.width = 100 * (1 - (failures / runs)) + "%";
   $progressFailures.style.width = 100 * (failures / runs) + "%";
+
+  document.getElementById("testCases").childNodes.forEach(c => {
+      const testName = c.testName;
+      const $status = c.firstChild;
+
+      $status.innerHTML = "";
+      $status.classList.remove("successful-test");
+      $status.classList.remove("failed-test");
+
+      if (successfulTests.filter(t => t.name == testName).length == 1) {
+        $status.innerHTML = "✓";
+        $status.classList.add("successful-test");
+      } else if (failedTests.filter(t => t.name == testName).length == 1) {
+        $status.innerHTML = "✗";
+        $status.classList.add("failed-test");
+      }
+  });
+
+  renderTestCase(currentTest);
 }
 
 // ---
@@ -325,3 +366,4 @@ var viewer = new BpmnViewer({
 
 window.viewer = viewer;
 window.tests = tests;
+window.testResults = testResults;
