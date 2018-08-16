@@ -53,9 +53,10 @@ public class RunnerMojo extends AbstractMojo {
             final List<TestResult> testResults = testRunner.run(workflowResources, testCases);
 
             for (TestResult result : testResults) {
-              logResult(result);
               final File resultFile = new File(outputDir, result.getName() + ".result");
               mapper.writeValue(resultFile, result);
+
+              logResult(result);
             }
 
           } catch (Exception ex) {
@@ -68,7 +69,7 @@ public class RunnerMojo extends AbstractMojo {
     }
   }
 
-  private void logResult(TestResult result) {
+  private void logResult(TestResult result) throws MojoExecutionException {
     final StringBuilder builder = new StringBuilder("Test case ").append(result.getName());
     final List<FailedVerification> failedVerifications = result.getFailedVerifications();
     if (failedVerifications.isEmpty()) {
@@ -76,7 +77,7 @@ public class RunnerMojo extends AbstractMojo {
       getLog().info(builder.toString());
     } else {
       builder.append(" failed.");
-      getLog().error(builder.toString());
+      throw new MojoExecutionException(builder.toString());
     }
   }
 
