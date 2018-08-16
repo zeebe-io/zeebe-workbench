@@ -78,6 +78,9 @@ html, body, #canvas {
   height: 400px;
 }
 
+html, body, #testCases {
+  height: 750px;
+}
 
 #testCases .entry :hover,
 #testCases .entry.active {

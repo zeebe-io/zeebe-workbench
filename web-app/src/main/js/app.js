@@ -11,60 +11,7 @@ import { queryAll as domQueryAll } from 'min-dom';
 
 import $ from "jquery";
 
-const history = [
-  { activityId: 'order-placed' },   // start event
-  { activityId: 'SequenceFlow_1ml1so0' },  // outgoing sequence flow
-  { activityId: 'collect-money' }    // activityId
-]
-
 // --- functions
-
-function renderHistory(animation, elementRegistry, tokenCount) {
-  const $history = document.getElementById("history");
-
-  $history.innerHTML = '';
-
-  history.forEach(activity => {
-    const element = elementRegistry.get(activity.activityId);
-
-    const $entry = document.createElement("div");
-
-    const type = element.type.split(":")[1];
-
-    $entry.innerHTML = activity.activityId + " (" + type + ")";
-    $entry.classList.add("entry");
-
-    if (type === "SequenceFlow") {
-        $entry.addEventListener("click", () => {
-          animation.createAnimation(element, "", () => { console.log("animation done") });
-        });
-    } else {
-
-      $entry.addEventListener("click", () => {
-        elementRegistry.forEach(element => {
-          tokenCount.removeTokenCount(element);
-        });
-
-        elementRegistry.forEach(element => {
-          if (!element.waypoint && Math.random() > 0.7) {
-            tokenCount.addTokenCount(element, Math.round(Math.random() * 50));
-          }
-        });
-      });
-
-    }
-
-    $entry.addEventListener("click", () => {
-      const $entries = domQueryAll("#history.entry");
-
-      $entries.forEach($e => $e.classList.remove("active"));
-
-      $entry.classList.add("active");
-    });
-
-    $history.appendChild($entry);
-  });
-}
 
 var tests = [];
 var currentTest = null;
@@ -254,7 +201,7 @@ function runTestCases(tests) {
         data:  JSON.stringify(tests),
         contentType: 'application/json; charset=utf-8',
         success: function (result) {
-        	console.log("TODO show result: " + result);
+        	showTestResults(result);
         },
         error: function (xhr, ajaxOptions, thrownError) {
        	 console.log("failed to run tests: " + thrownError);
@@ -267,6 +214,22 @@ function runTestCases(tests) {
 document.getElementById("runTestsButton")
         .addEventListener("click", () => runTestCases(tests));
 
+function showTestResults(results) {
+  const $testRuns = document.getElementById("testRuns");
+  const $testFailures = document.getElementById("testFailures");
+  const $progressSuccess = document.getElementById("testResultProgressSuccess");
+  const $progressFailures = document.getElementById("testResultProgressFailures");
+
+  const runs = results.length;
+  const failures = results.filter(r => r.failedVerifications.length > 0).length;
+
+  $testRuns.innerHTML = runs;
+  $testFailures.innerHTML = failures;
+
+  $progressSuccess.style.width = 100 * (1 - (failures / runs)) + "%";
+  $progressFailures.style.width = 100 * (failures / runs) + "%";
+}
+
 // ---
 
 var viewer = new BpmnViewer({
@@ -276,7 +239,5 @@ var viewer = new BpmnViewer({
   ]
 });
 
-
 window.viewer = viewer;
-
 window.tests = tests;
