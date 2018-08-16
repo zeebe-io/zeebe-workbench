@@ -29,7 +29,7 @@ function createNewTestCase() {
 
   const $testName = document.createElement("span");
   const $runSingleTest = document.createElement("span");
-
+  const $removeTest = document.createElement("span");
 
   $testName.innerHTML = $name.value;
   $testName.classList.add("col");
@@ -39,11 +39,16 @@ function createNewTestCase() {
   $runSingleTest.classList.add("col");
   $runSingleTest.classList.add("run-single-test");
 
+  $removeTest.innerHTML = "✕";
+  $removeTest.classList.add("col");
+  $removeTest.classList.add("remove-test");
+
   $("#testCases>div>span.active").removeClass("active");
   $testName.classList.add("active");
 
   $newTestCase.appendChild($testName);
   $newTestCase.appendChild($runSingleTest);
+  $newTestCase.appendChild($removeTest);
   $testCases.appendChild($newTestCase);
 
   const newTest = {
@@ -66,7 +71,6 @@ function createNewTestCase() {
     showTestCase(newTest);
   });
 
-
   $runSingleTest.addEventListener("click", () => {
       $("#testCases>div>span.active").removeClass("active");
       $testName.classList.add("active");
@@ -75,6 +79,25 @@ function createNewTestCase() {
       showTestCase(newTest);
 
       runTestCases([newTest]);
+  });
+
+  $removeTest.addEventListener("click", () => {
+      const index = tests.indexOf(newTest);
+      tests.pop(index);
+
+      $testCases.removeChild($newTestCase);
+
+      if (tests.length > 0) {
+        currentTest = tests[0];
+        showTestCase(currentTest);
+      } else {
+        const $commands = document.getElementById("commands");
+        while ($commands.firstChild) {
+          $commands.removeChild($commands.firstChild);
+        }
+
+        viewer.detach();
+      }
   });
 
   var file = $resource.files[0];
@@ -111,6 +134,7 @@ function showTestCase(testCase) {
   viewer.importXML(testCase.resource.xml, function(err) {
 
    if (!err) {
+      viewer.attachTo(document.getElementById("canvas"));
       viewer.get('canvas').zoom('fit-viewport');
     } else {
       console.log('something went wrong:', err);

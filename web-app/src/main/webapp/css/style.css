@@ -101,3 +101,12 @@ html, body, #testCases {
    font-weight: bold;
 }
 
+#testCases .remove-test {
+   color: red;
+   cursor: pointer;
+}
+
+#testCases .remove-test :hover {
+   font-weight: bold;
+}
+
