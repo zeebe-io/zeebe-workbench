@@ -16,20 +16,25 @@ package io.zeebe.workbench;
  * limitations under the License.
  */
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.agrona.ExpandableArrayBuffer;
+import io.zeebe.workbench.impl.TestRunner;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
-import java.io.*;
+import java.io.File;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Mojo(name = "runner", defaultPhase = LifecyclePhase.TEST)
 public class RunnerMojo extends AbstractMojo {
+
+  private final List<WorkflowResource> workflowResources = new ArrayList<>();
+  private final List<TestCase> testCases = new ArrayList<>();
 
   @Parameter(property = "resourcesDir", required = true)
   private File resourcesDir;
@@ -38,22 +43,13 @@ public class RunnerMojo extends AbstractMojo {
     if (resourcesDir != null && resourcesDir.isDirectory()) {
       final File[] files = resourcesDir.listFiles();
       if (files != null && files.length > 0) {
-        for (File file : files) {
-          try {
-            if (file.getName().contains(".bpmn")) {
-              final BufferedInputStream bufferedInputStream =
-                  new BufferedInputStream(new FileInputStream(file));
+        readResources(files);
 
-              // workflow resource
-            } else if (file.getName().contains(".case")) {
-              final ObjectMapper mapper = new ObjectMapper();
-              mapper.readTree(file);
-              // test case definition
-
-            }
-
+        if (!testCases.isEmpty()) {
+          try (final TestRunner testRunner = new TestRunner()) {
+            testRunner.run(workflowResources, testCases);
           } catch (Exception ex) {
-            throw new MojoExecutionException("Failed to open file: " + file.getName(), ex);
+            throw new MojoExecutionException("Problem in test case execution.", ex);
           }
         }
       }
@@ -62,22 +58,23 @@ public class RunnerMojo extends AbstractMojo {
     }
   }
 
-  private byte[] readBytes(File file) throws MojoExecutionException {
+  private void readResources(File[] files) throws MojoExecutionException {
+    for (File file : files) {
+      try {
+        if (file.getName().contains(".bpmn")) {
+          final byte[] bytes = Files.readAllBytes(file.toPath());
+          final WorkflowResource resource = new WorkflowResource(bytes, file.getName());
+          workflowResources.add(resource);
+        } else if (file.getName().contains(".case")) {
+          final ObjectMapper mapper = new ObjectMapper();
+          final JsonNode jsonNode = mapper.readTree(file);
 
-    final ExpandableArrayBuffer buffer = new ExpandableArrayBuffer();
-
-    try (final BufferedReader bufferedReader = new BufferedReader(new FileReader(file))) {
-
-
-      final List<String> collect = bufferedReader.lines().collect(Collectors.toList());
-
-
-
-
-    } catch (Exception ex) {
-      throw new MojoExecutionException("Failed to open file: " + file.getName(), ex);
+          final TestCase testCase = mapper.treeToValue(jsonNode, TestCase.class);
+          testCases.add(testCase);
+        }
+      } catch (Exception ex) {
+        throw new MojoExecutionException("Failed to open file: " + file.getName(), ex);
+      }
     }
-
-    return null;
   }
 }
