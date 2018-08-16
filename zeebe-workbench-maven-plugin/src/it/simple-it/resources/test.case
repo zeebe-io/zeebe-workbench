@@ -1,6 +1,6 @@
 {
   "name": "test1",
-  "resourceName": "process.bpmn",
+  "resourceName": "orderProcess.bpmn",
   "startPayload": "{}",
   "commands": [
     {
@@ -12,7 +12,7 @@
     {
       "expectedIntent": "ELEMENT_COMPLETED",
       "expectedPayload": "{}",
-      "activityId": "process"
+      "activityId": "order-process"
     }
   ]
 }

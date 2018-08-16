@@ -16,7 +16,6 @@ package io.zeebe.workbench;
  * limitations under the License.
  */
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.zeebe.workbench.impl.TestRunner;
 import org.apache.maven.plugin.AbstractMojo;
@@ -46,6 +45,7 @@ public class RunnerMojo extends AbstractMojo {
         readResources(files);
 
         if (!testCases.isEmpty()) {
+
           try (final TestRunner testRunner = new TestRunner()) {
             testRunner.run(workflowResources, testCases);
           } catch (Exception ex) {
@@ -62,15 +62,29 @@ public class RunnerMojo extends AbstractMojo {
     for (File file : files) {
       try {
         if (file.getName().contains(".bpmn")) {
+
+          getLog().debug("Read workflow resource");
           final byte[] bytes = Files.readAllBytes(file.toPath());
           final WorkflowResource resource = new WorkflowResource(bytes, file.getName());
           workflowResources.add(resource);
-        } else if (file.getName().contains(".case")) {
-          final ObjectMapper mapper = new ObjectMapper();
-          final JsonNode jsonNode = mapper.readTree(file);
 
-          final TestCase testCase = mapper.treeToValue(jsonNode, TestCase.class);
-          testCases.add(testCase);
+        } else if (file.getName().contains(".case")) {
+
+          getLog().debug("Read test case");
+          final byte[] bytes = Files.readAllBytes(file.toPath());
+          getLog().debug(new String(bytes));
+
+          final ObjectMapper mapper = new ObjectMapper();
+          final TestCase testCase1 = mapper.readValue(bytes, TestCase.class);
+
+          //
+          //          final JsonNode jsonNode = mapper.readTree(bytes);
+          //
+          //          getLog().debug(jsonNode.get("name").asText());
+          //          getLog().debug(jsonNode.toString());
+          //
+          //          final TestCase testCase = mapper.treeToValue(jsonNode, TestCase.class);
+          testCases.add(testCase1);
         }
       } catch (Exception ex) {
         throw new MojoExecutionException("Failed to open file: " + file.getName(), ex);
