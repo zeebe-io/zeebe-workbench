@@ -123,18 +123,18 @@ public class TestRunner implements Runner, AutoCloseable {
 
     final List<Verification> verifications = testCase.getVerifications();
     final List<FailedVerification> failedVerifications =
-        evaluateVerifications(testCase, verifications);
+        evaluateVerifications(testCase, bpmnProcessId, verifications);
     result.addFailedVerifications(failedVerifications);
 
     return result;
   }
 
   private List<FailedVerification> evaluateVerifications(
-      TestCase testCase, List<Verification> verifications) {
+      TestCase testCase, String bpmnProcessId, List<Verification> verifications) {
     List<FailedVerification> failedVerifications = Collections.EMPTY_LIST;
     if (verifications != null && !verifications.isEmpty()) {
       try {
-        failedVerifications = verify(testCase, verifications);
+        failedVerifications = verify(testCase, bpmnProcessId, verifications);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -142,7 +142,8 @@ public class TestRunner implements Runner, AutoCloseable {
     return failedVerifications;
   }
 
-  private List<FailedVerification> verify(TestCase testCase, List<Verification> verifications)
+  private List<FailedVerification> verify(
+      TestCase testCase, String bpmnProcessId, List<Verification> verifications)
       throws InterruptedException {
     final Map<String, Verification> verificationMap =
         verifications.stream().collect(Collectors.toMap(v -> v.getActivityId(), v -> v));
@@ -180,12 +181,11 @@ public class TestRunner implements Runner, AutoCloseable {
               events.add(workflowInstanceEvent);
 
               if (workflowInstanceEvent.getState() == WorkflowInstanceState.ELEMENT_COMPLETED
-                  && workflowInstanceEvent
-                      .getActivityId()
-                      .equals(workflowInstanceEvent.getBpmnProcessId())) {
+                  && workflowInstanceEvent.getActivityId().equals(bpmnProcessId)) {
                 latch.countDown();
               }
-            });
+            })
+        .open();
 
     latch.await(5, TimeUnit.SECONDS);
 

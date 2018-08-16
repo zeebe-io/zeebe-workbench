@@ -58,7 +58,7 @@ public class VerifyWorkflowTest {
     final List<TestResult> results = runner.run(resource, testCase);
 
     // then
-    assertThat(results).isEmpty();
+    assertThat(results.stream().flatMap(r -> r.getFailedVerifications().stream())).isEmpty();
   }
 
   @Test
