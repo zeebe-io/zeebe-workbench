@@ -272,7 +272,7 @@ public class TestRunner implements Runner, AutoCloseable {
                   })
               .open();
 
-      latch.await();
+      latch.await(TEST_TIMEOUT, TEST_TIMEOUT_UNIT);
     } finally {
       if (jobWorker != null) {
         jobWorker.close();

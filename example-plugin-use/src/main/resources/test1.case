@@ -1,5 +1,5 @@
 {
-  "name": "test",
+  "name": "test1",
   "resourceName": "orderProcess.bpmn",
   "startPayload": "{}",
   "commands": [

@@ -1,14 +1,10 @@
 {
-  "name": "test",
+  "name": "test2",
   "resourceName": "orderProcess.bpmn",
   "startPayload": "{}",
   "commands": [
     {
       "activityId": "collect-money",
-      "payload": "{}"
-    },
-    {
-      "activityId": "fetch-items",
       "payload": "{}"
     },
     {

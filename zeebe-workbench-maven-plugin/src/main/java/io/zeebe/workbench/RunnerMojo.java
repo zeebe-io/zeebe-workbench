@@ -36,6 +36,16 @@ public class RunnerMojo extends AbstractMojo {
   private final List<WorkflowResource> workflowResources = new ArrayList<>();
   private final List<TestCase> testCases = new ArrayList<>();
 
+  private final StringBuilder logBuilder = new StringBuilder();
+  private final List<FailedVerification> globalFailedVerifications = new ArrayList<>();
+
+  public RunnerMojo() {
+    logBuilder
+        .append("\n\n-------------------------------------------------------")
+        .append("\nZ E E B E - T E S T S\n")
+        .append("-------------------------------------------------------");
+  }
+
   @Parameter(property = "resourcesDir", required = true)
   private File resourcesDir;
 
@@ -44,6 +54,7 @@ public class RunnerMojo extends AbstractMojo {
 
   public void execute() throws MojoExecutionException {
     System.setProperty("org.slf4j.simpleLogger.log.io.zeebe", "error");
+    System.setProperty("org.slf4j.simpleLogger.log.io.zeebe.workbench", "info");
 
     if (resourcesDir != null && resourcesDir.isDirectory()) {
       final File[] files = resourcesDir.listFiles();
@@ -64,6 +75,17 @@ public class RunnerMojo extends AbstractMojo {
           } catch (Exception ex) {
             throw new MojoExecutionException("Problem in test case execution.", ex);
           }
+
+          logBuilder.append("\n\nResults:\n\n");
+          final String resultLog = "Tests run: %d failed: %d";
+          final int failedCount = globalFailedVerifications.size();
+          logBuilder.append(String.format(resultLog, testCases.size(), failedCount));
+
+          getLog().info(logBuilder.toString());
+
+          if (failedCount > 0) {
+            throw new MojoExecutionException("There was " + failedCount + " failing test cases.");
+          }
         }
       }
     } else {
@@ -72,14 +94,28 @@ public class RunnerMojo extends AbstractMojo {
   }
 
   private void logResult(TestResult result) throws MojoExecutionException {
-    final StringBuilder builder = new StringBuilder("Test case ").append(result.getName());
+    logBuilder.append("\nTest case '").append(result.getName()).append("'");
     final List<FailedVerification> failedVerifications = result.getFailedVerifications();
     if (failedVerifications.isEmpty()) {
-      builder.append(" successful.");
-      getLog().info(builder.toString());
+      logBuilder.append(" successful.");
     } else {
-      builder.append(" failed.");
-      throw new MojoExecutionException(builder.toString());
+      logBuilder.append(" failed.");
+      for (FailedVerification failedVerification : failedVerifications) {
+        logBuilder.append("\n\tFailed verification: ");
+        final String actualPayLoad = failedVerification.getActualPayLoad();
+        final Verification verification = failedVerification.getVerification();
+        if (actualPayLoad != null) {
+          final String payloadLog = "Payload '%s' is not equal to expected payload '%s'.";
+          logBuilder.append(
+              String.format(payloadLog, actualPayLoad, verification.getExpectedPayload()));
+        } else {
+          final String verificationLog = "Expected state '%s' of activity '%s' was not reached.";
+          logBuilder.append(
+              String.format(
+                  verificationLog, verification.getExpectedIntent(), verification.getActivityId()));
+        }
+      }
+      this.globalFailedVerifications.addAll(failedVerifications);
     }
   }
 
