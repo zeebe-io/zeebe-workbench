@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Zeebe Modeler" exporterVersion="0.1.0">
+  <bpmn:process id="order-process" name="Order process" isExecutable="true">
+    <bpmn:startEvent id="order-placed" name="Order Placed&#10;&#10;">
+      <bpmn:outgoing>SequenceFlow_1ml1so0</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="collect-money" name="Collect Money">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="collect-money" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_1ml1so0</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1a571rg</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SequenceFlow_1ml1so0" sourceRef="order-placed" targetRef="collect-money" />
+    <bpmn:serviceTask id="fetch-items" name="Fetch Items">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="fetch-items" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_1a571rg</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0heyqfe</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SequenceFlow_1a571rg" sourceRef="collect-money" targetRef="fetch-items" />
+    <bpmn:serviceTask id="ship-parcel-with-insurance" name="Ship Parcel with Transport Insurance">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="ship-parcel-with-insurance" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_13brtjy</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0g0j28e</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SequenceFlow_0heyqfe" sourceRef="fetch-items" targetRef="ExclusiveGateway_1nxbuey" />
+    <bpmn:endEvent id="order-delivered-with-insurance" name="Order Delivered with incurance">
+      <bpmn:incoming>SequenceFlow_0g0j28e</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_0g0j28e" sourceRef="ship-parcel-with-insurance" targetRef="order-delivered-with-insurance" />
+    <bpmn:exclusiveGateway id="ExclusiveGateway_1nxbuey" name="transport with insurance?" default="SequenceFlow_08roqvr">
+      <bpmn:incoming>SequenceFlow_0heyqfe</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_13brtjy</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_08roqvr</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="SequenceFlow_13brtjy" name="$.totalPrice &#62; 100" sourceRef="ExclusiveGateway_1nxbuey" targetRef="ship-parcel-with-insurance">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[$.totalPrice > 100]]></bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="ServiceTask_1agud13" name="Ship Parcel">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="ship-parcel" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_08roqvr</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0um27fa</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SequenceFlow_08roqvr" sourceRef="ExclusiveGateway_1nxbuey" targetRef="ServiceTask_1agud13" />
+    <bpmn:endEvent id="order-delivered" name="Order Delivered">
+      <bpmn:incoming>SequenceFlow_0um27fa</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_0um27fa" sourceRef="ServiceTask_1agud13" targetRef="order-delivered" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="order-process">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="order-placed">
+        <dc:Bounds x="173" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="160" y="138" width="67" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_15pkywh_di" bpmnElement="collect-money">
+        <dc:Bounds x="282" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1ml1so0_di" bpmnElement="SequenceFlow_1ml1so0">
+        <di:waypoint xsi:type="dc:Point" x="209" y="120" />
+        <di:waypoint xsi:type="dc:Point" x="282" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="245.5" y="100" width="0" height="10" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="ServiceTask_09npg5j_di" bpmnElement="fetch-items">
+        <dc:Bounds x="461" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1a571rg_di" bpmnElement="SequenceFlow_1a571rg">
+        <di:waypoint xsi:type="dc:Point" x="382" y="120" />
+        <di:waypoint xsi:type="dc:Point" x="461" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="421.5" y="100" width="0" height="10" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="ServiceTask_0x3i2pd_di" bpmnElement="ship-parcel-with-insurance">
+        <dc:Bounds x="788" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_0heyqfe_di" bpmnElement="SequenceFlow_0heyqfe">
+        <di:waypoint xsi:type="dc:Point" x="561" y="120" />
+        <di:waypoint xsi:type="dc:Point" x="608" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="539.5" y="100" width="90" height="10" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="EndEvent_022enc7_di" bpmnElement="order-delivered-with-insurance">
+        <dc:Bounds x="1041" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1020" y="143" width="80" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_0g0j28e_di" bpmnElement="SequenceFlow_0g0j28e">
+        <di:waypoint xsi:type="dc:Point" x="888" y="120" />
+        <di:waypoint xsi:type="dc:Point" x="1041" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="919.5" y="100" width="90" height="10" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="ExclusiveGateway_1nxbuey_di" bpmnElement="ExclusiveGateway_1nxbuey" isMarkerVisible="true">
+        <dc:Bounds x="608" y="95" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="599" y="70" width="68" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_13brtjy_di" bpmnElement="SequenceFlow_13brtjy">
+        <di:waypoint xsi:type="dc:Point" x="658" y="120" />
+        <di:waypoint xsi:type="dc:Point" x="788" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="679" y="100" width="88" height="10" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="ServiceTask_1agud13_di" bpmnElement="ServiceTask_1agud13">
+        <dc:Bounds x="788" y="225" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_08roqvr_di" bpmnElement="SequenceFlow_08roqvr">
+        <di:waypoint xsi:type="dc:Point" x="633" y="145" />
+        <di:waypoint xsi:type="dc:Point" x="633" y="265" />
+        <di:waypoint xsi:type="dc:Point" x="788" y="265" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="648" y="200" width="0" height="10" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="EndEvent_0kajw98_di" bpmnElement="order-delivered">
+        <dc:Bounds x="1041" y="247" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1019" y="288" width="80" height="10" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_0um27fa_di" bpmnElement="SequenceFlow_0um27fa">
+        <di:waypoint xsi:type="dc:Point" x="888" y="265" />
+        <di:waypoint xsi:type="dc:Point" x="1041" y="265" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="964.5" y="245" width="0" height="10" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
