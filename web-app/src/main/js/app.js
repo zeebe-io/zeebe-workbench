@@ -35,6 +35,7 @@ function createNewTestCase() {
   const newTest = {
       name : $name.value,
       resource : null,
+      startPayload: null,
       commands: [],
       verifications: []
   };
@@ -105,7 +106,7 @@ function showTestCase(testCase) {
       const activityType = e.element.type;
 
 
-      if (activityType == "bpmn:ServiceTask") {
+      if (activityType == "bpmn:ServiceTask" || activityType == "bpmn:StartEvent" || activityType == "bpmn:EndEvent") {
         canvas.addMarker(activityId, 'diagram-marker');
       }
     });
@@ -115,9 +116,7 @@ function showTestCase(testCase) {
       const activityId = e.element.id;
       const activityType = e.element.type;
 
-      if (activityType == "bpmn:ServiceTask") {
-        canvas.removeMarker(activityId, 'diagram-marker');
-      }
+      canvas.removeMarker(activityId, 'diagram-marker');
     });
 
 
@@ -126,42 +125,73 @@ function showTestCase(testCase) {
       // e.element = the model element
       // e.gfx = the graphical element
 
-      const activityId = e.element.id;
-      const activityName = e.element.businessObject.name;
-      const activityType = e.element.type;
-
-      if (activityType != "bpmn:ServiceTask") {
-        return;
-      }
-
-      var overlayHtml = $('<div class="diagram-note row">'+
-      '<div class="col"><p class="col">Complete with payload:</p></div>' +
-      '<div class="col"><textarea id="job-payload" class="form-control col">{}</textarea></div>' +
-      '<div class="col"><button type="button" class="btn btn-light" id="addCommandButton">Add</button></div>' +
-      '</div>');
-
       if (openOverlay != '') {
         overlays.remove(openOverlay);
       }
 
-      // attach the overlayHtml to a node
-      openOverlay = overlays.add(activityId, {
-        position: {
-          bottom: 0,
-          right: 0
-        },
-        html: overlayHtml
+      const activityId = e.element.id;
+      const activityName = e.element.businessObject.name;
+      const activityType = e.element.type;
+
+      const showOverlay = function(activityId, title, onClick) {
+
+        var overlayHtml = $('<div class="diagram-note row">'+
+        '<div class="col"><p class="col">' + title + '</p></div>' +
+        '<div class="col"><textarea id="command-payload" class="form-control col">{}</textarea></div>' +
+        '<div class="col"><button type="button" class="btn btn-light" id="addCommandButton">Done</button></div>' +
+        '</div>');
+
+        // attach the overlayHtml to a node
+        openOverlay = overlays.add(activityId, {
+          position: {
+            bottom: 0,
+            right: 0
+          },
+          html: overlayHtml
+        });
+
+        document.getElementById("addCommandButton")
+                .addEventListener("click",() => {
+
+                  const $payload = document.getElementById("command-payload");
+                  onClick($payload.value);
+
+                  overlays.remove(openOverlay);
+                  openOverlay = '';
+                });
+      }
+
+      if (activityType == "bpmn:ServiceTask") {
+
+        showOverlay(activityId, "Complete with payload:", payload => {
+          currentTest.commands.push({
+            activityId: activityId,
+            payload: payload,
+          });
+
+          renderTestCase(currentTest);
+        });
+
+      } else if (activityType == "bpmn:StartEvent") {
+
+        showOverlay(activityId, "Create instance with payload:", payload => {
+          currentTest.startPayload = payload;
+          renderTestCase(currentTest);
+        });
+
+      } else if (activityType == "bpmn:EndEvent") {
+
+      showOverlay(activityId, "Verify completed with payload:", payload => {
+
+        currentTest.verifications.push({
+          activityId: activityId,
+          expectedPayload: payload,
+          expectedIntent: "END_EVENT_OCCURRED"
+        });
+
+        renderTestCase(currentTest);
       });
-
-      document.getElementById("addCommandButton")
-              .addEventListener("click",() => {
-                const $payload = document.getElementById("job-payload");
-                createNewCommand(activityId, $payload.value)
-
-                overlays.remove(openOverlay);
-                openOverlay = '';
-              });
-
+    }
 
     });
 
@@ -176,22 +206,26 @@ function renderTestCase(testCase) {
     $commands.removeChild($commands.firstChild);
   }
 
+  if (testCase.startPayload) {
+    const $newCommand = document.createElement("div");
+
+    $newCommand.innerHTML = "Create workflow instance with payload: " + testCase.startPayload;
+    $commands.appendChild($newCommand);
+  }
+
   testCase.commands.forEach(cmd => {
     const $newCommand = document.createElement("div");
 
-    $newCommand.innerHTML = "Complete Job '" + cmd.activityId + "' with Payload: " + cmd.payload;
+    $newCommand.innerHTML = "Complete Job '" + cmd.activityId + "' with payload: " + cmd.payload;
     $commands.appendChild($newCommand);
   });
-}
 
-function createNewCommand(activityId, payload) {
+  testCase.verifications.forEach(v => {
+    const $newVerification = document.createElement("div");
 
-  currentTest.commands.push({
-    activityId: activityId,
-    payload: payload,
-  })
-
-  renderTestCase(currentTest);
+    $newVerification.innerHTML = "Verify '" + v.activityId + "' is completed with payload: " + v.expectedPayload;
+    $commands.appendChild($newVerification);
+  });
 }
 
 function runTestCases(tests) {

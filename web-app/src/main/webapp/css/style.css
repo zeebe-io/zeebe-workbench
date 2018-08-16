@@ -71,7 +71,7 @@ html, body, #canvas, #canvas > div {
  }
 
  .diagram-marker:not(.djs-connection) .djs-visual > :nth-child(1) {
-   stroke: rgba(66, 180, 21, 0.7) !important; /* color elements as red */
+   stroke: rgba(66, 180, 21, 0.7) !important;
  }
  
 html, body, #canvas {

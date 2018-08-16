@@ -21,11 +21,13 @@ object TestRunnerServlet {
   // JSON data objects
   case class TestCases(tests: Iterable[TestCase])
 
-  case class TestCase(name: String, resource: TestResource, commands: List[TestCommand], verifications: List[Any])
+  case class TestCase(name: String, resource: TestResource, commands: List[TestCommand], verifications: List[TestVerification])
 
   case class TestResource(name: String, xml: String, content: Any)
 
   case class TestCommand(activityId: String, payload: String)
+
+  case class TestVerification(expectedIntent: String, expectedPayload: String, activityId: String)
 
   case class TestResult(name: String, failedVerifications: List[FailedVerification])
 
@@ -77,7 +79,7 @@ class TestRunnerServlet
     val tests = testCases.map(t => {
 
       val commands = t.commands.map(c => new Command(c.activityId, c.payload))
-      val verifications = List(new Verification("ELEMENT_COMPLETED", "{}", "order-process"))
+      val verifications = t.verifications.map(v => new Verification(v.expectedIntent, v.expectedPayload, v.activityId))
 
       new io.zeebe.workbench.TestCase(t.name, t.resource.name, "{}", commands.asJava, verifications.asJava)
     })
