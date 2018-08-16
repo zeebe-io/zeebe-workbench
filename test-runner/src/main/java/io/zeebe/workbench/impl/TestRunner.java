@@ -10,6 +10,7 @@ import io.zeebe.gateway.api.clients.TopicClient;
 import io.zeebe.gateway.api.events.WorkflowInstanceEvent;
 import io.zeebe.gateway.api.events.WorkflowInstanceState;
 import io.zeebe.gateway.api.subscription.JobWorker;
+import io.zeebe.gateway.api.subscription.TopicSubscription;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.BpmnModelInstance;
 import io.zeebe.model.bpmn.instance.Process;
@@ -21,8 +22,10 @@ import io.zeebe.workbench.*;
 import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -157,50 +160,59 @@ public class TestRunner implements Runner, AutoCloseable {
     final List<WorkflowInstanceEvent> events = new CopyOnWriteArrayList<>();
     final List<FailedVerification> failedVerifications = new CopyOnWriteArrayList<>();
 
-    topicClient
-        .newSubscription()
-        .name(testCase.getName())
-        .workflowInstanceEventHandler(
-            workflowInstanceEvent -> {
-              if (workflowInstanceEvent.getWorkflowInstanceKey()
-                  != instanceEvent.getWorkflowInstanceKey()) {
-                return;
-              }
+    TopicSubscription subscription = null;
+    try {
+      subscription =
+          topicClient
+              .newSubscription()
+              .name(testCase.getName())
+              .workflowInstanceEventHandler(
+                  workflowInstanceEvent -> {
+                    if (workflowInstanceEvent.getWorkflowInstanceKey()
+                        != instanceEvent.getWorkflowInstanceKey()) {
+                      return;
+                    }
 
-              final Verification verification =
-                  verificationMap.get(workflowInstanceEvent.getActivityId());
+                    final Verification verification =
+                        verificationMap.get(workflowInstanceEvent.getActivityId());
 
-              if (verification != null) {
-                final WorkflowInstanceState state = workflowInstanceEvent.getState();
-                if (verification.getExpectedIntent().equalsIgnoreCase(state.name())) {
-                  final JsonNode expectedPayload =
-                      objectMapper.readTree(verification.getExpectedPayload());
-                  final JsonNode actualPayload =
-                      objectMapper.readTree(workflowInstanceEvent.getPayload());
+                    if (verification != null) {
+                      final WorkflowInstanceState state = workflowInstanceEvent.getState();
+                      if (verification.getExpectedIntent().equalsIgnoreCase(state.name())) {
+                        final JsonNode expectedPayload =
+                            objectMapper.readTree(verification.getExpectedPayload());
+                        final JsonNode actualPayload =
+                            objectMapper.readTree(workflowInstanceEvent.getPayload());
 
-                  if (!expectedPayload.equals(actualPayload)) {
-                    final FailedVerification failedVerification =
-                        new FailedVerification(verification, workflowInstanceEvent.getPayload());
-                    failedVerifications.add(failedVerification);
-                  }
+                        if (!expectedPayload.equals(actualPayload)) {
+                          final FailedVerification failedVerification =
+                              new FailedVerification(
+                                  verification, workflowInstanceEvent.getPayload());
+                          failedVerifications.add(failedVerification);
+                        }
 
-                  verificationMap.remove(workflowInstanceEvent.getActivityId());
-                }
-              }
+                        verificationMap.remove(workflowInstanceEvent.getActivityId());
+                      }
+                    }
 
-              events.add(workflowInstanceEvent);
+                    events.add(workflowInstanceEvent);
 
-              if (workflowInstanceEvent.getState() == WorkflowInstanceState.ELEMENT_COMPLETED
-                  && workflowInstanceEvent
-                      .getActivityId()
-                      .equals(instanceEvent.getBpmnProcessId())) {
-                latch.countDown();
-              }
-            })
-        .startAtPosition(1, instanceEvent.getMetadata().getPosition())
-        .open();
+                    if (workflowInstanceEvent.getState() == WorkflowInstanceState.ELEMENT_COMPLETED
+                        && workflowInstanceEvent
+                            .getActivityId()
+                            .equals(instanceEvent.getBpmnProcessId())) {
+                      latch.countDown();
+                    }
+                  })
+              .startAtPosition(1, instanceEvent.getMetadata().getPosition())
+              .open();
 
-    latch.await(TEST_TIMEOUT, TEST_TIMEOUT_UNIT);
+      latch.await(TEST_TIMEOUT, TEST_TIMEOUT_UNIT);
+    } finally {
+      if (subscription != null) {
+        subscription.close();
+      }
+    }
 
     final Collection<Verification> remainingVerifications = verificationMap.values();
     for (Verification verification : remainingVerifications) {
@@ -227,44 +239,44 @@ public class TestRunner implements Runner, AutoCloseable {
         bpmnModelInstance.getModelElementById(cmd.getActivityId());
 
     if (modelElementById instanceof ServiceTask) {
-      final CountDownLatch latch = new CountDownLatch(1);
-      final ServiceTask serviceTask = (ServiceTask) modelElementById;
-
-      final ZeebeTaskDefinition zeebeTaskDefinition =
-          serviceTask
-              .getExtensionElements()
-              .getElementsQuery()
-              .filterByType(ZeebeTaskDefinition.class)
-              .singleResult();
-      final String taskType = zeebeTaskDefinition.getType();
-
-      JobWorker jobWorker = null;
-      try {
-        jobWorker =
-            topicClient
-                .jobClient()
-                .newWorker()
-                .jobType(taskType)
-                .handler(
-                    (jobClient, jobEvent) -> {
-                      latch.countDown();
-                      jobClient
-                          .newCompleteCommand(jobEvent)
-                          .payload(cmd.getPayload())
-                          .send()
-                          .join();
-                    })
-                .open();
-
-        latch.await();
-      } finally {
-        if (jobWorker != null) {
-          jobWorker.close();
-        }
-      }
-
+      executeServiceTaskCommands(cmd, (ServiceTask) modelElementById);
     } else {
       throw new IllegalArgumentException("Only service tasks are currently supported.");
+    }
+  }
+
+  private void executeServiceTaskCommands(Command cmd, ServiceTask modelElementById)
+      throws InterruptedException {
+    final CountDownLatch latch = new CountDownLatch(1);
+    final ServiceTask serviceTask = modelElementById;
+
+    final ZeebeTaskDefinition zeebeTaskDefinition =
+        serviceTask
+            .getExtensionElements()
+            .getElementsQuery()
+            .filterByType(ZeebeTaskDefinition.class)
+            .singleResult();
+    final String taskType = zeebeTaskDefinition.getType();
+
+    JobWorker jobWorker = null;
+    try {
+      jobWorker =
+          topicClient
+              .jobClient()
+              .newWorker()
+              .jobType(taskType)
+              .handler(
+                  (jobClient, jobEvent) -> {
+                    latch.countDown();
+                    jobClient.newCompleteCommand(jobEvent).payload(cmd.getPayload()).send().join();
+                  })
+              .open();
+
+      latch.await();
+    } finally {
+      if (jobWorker != null) {
+        jobWorker.close();
+      }
     }
   }
 
@@ -272,5 +284,10 @@ public class TestRunner implements Runner, AutoCloseable {
   public void close() throws Exception {
     zeebeClient.close();
     broker.close();
+
+    Files.walk(new File(tempFolder).toPath())
+        .sorted(Comparator.reverseOrder())
+        .map(Path::toFile)
+        .forEach(File::delete);
   }
 }

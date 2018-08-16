@@ -63,6 +63,27 @@ public class MultipleTestCasesTest {
   }
 
   @Test
+  public void shouldRunMultipleTestCasesTwice() {
+    // given
+    final List<TestCase> testCases = new ArrayList<>();
+
+    testCases.add(createTestCase("test-1", "PROCESS", "process.bpmn"));
+    testCases.add(createTestCase("test-2", "PROCESS_2", "process_2.bpmn"));
+
+    // when
+    List<TestResult> results = runner.run(resources, testCases);
+
+    // then
+    assertThat(results.stream().flatMap(r -> r.getFailedVerifications().stream())).isEmpty();
+
+    // when
+    results = runner.run(resources, testCases);
+
+    // then
+    assertThat(results.stream().flatMap(r -> r.getFailedVerifications().stream())).isEmpty();
+  }
+
+  @Test
   public void shouldRunMultipleTestCasesOnSameResource() {
     // given
     final List<TestCase> testCases = new ArrayList<>();
