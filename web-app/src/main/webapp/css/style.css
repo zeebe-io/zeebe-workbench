@@ -92,3 +92,12 @@ html, body, #testCases {
    font-weight: bold;
 }
 
+#testCases .run-single-test {
+   color: green;
+   cursor: pointer;
+}
+
+#testCases .run-single-test :hover {
+   font-weight: bold;
+}
+

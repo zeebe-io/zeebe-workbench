@@ -27,11 +27,24 @@ function createNewTestCase() {
   const $testCases = document.getElementById("testCases");
   const $newTestCase = document.createElement("div");
 
-  $newTestCase.innerHTML = $name.value;
-  $newTestCase.classList.add("entry");
+  const $testName = document.createElement("span");
+  const $runSingleTest = document.createElement("span");
 
-  document.getElementById("testCases").childNodes.forEach(c => c.classList.remove("active"));
-  $newTestCase.classList.add("active");
+
+  $testName.innerHTML = $name.value;
+  $testName.classList.add("col");
+  $testName.classList.add("entry");
+
+  $runSingleTest.innerHTML = "▷";
+  $runSingleTest.classList.add("col");
+  $runSingleTest.classList.add("run-single-test");
+
+  $("#testCases>div>span.active").removeClass("active");
+  $testName.classList.add("active");
+
+  $newTestCase.appendChild($testName);
+  $newTestCase.appendChild($runSingleTest);
+  $testCases.appendChild($newTestCase);
 
   const newTest = {
       name : $name.value,
@@ -41,8 +54,30 @@ function createNewTestCase() {
       verifications: []
   };
 
-  var file = $resource.files[0];
+  currentTest = newTest;
+  tests.push(newTest);
 
+  $testName.addEventListener("click", () => {
+
+    $("#testCases>div>span.active").removeClass("active");
+    $testName.classList.add("active");
+
+    currentTest = newTest;
+    showTestCase(newTest);
+  });
+
+
+  $runSingleTest.addEventListener("click", () => {
+      $("#testCases>div>span.active").removeClass("active");
+      $testName.classList.add("active");
+
+      currentTest = newTest;
+      showTestCase(newTest);
+
+      runTestCases([newTest]);
+  });
+
+  var file = $resource.files[0];
   var reader = new FileReader();
   reader.onload = function(e) {
 
@@ -64,20 +99,9 @@ function createNewTestCase() {
 	};
   reader.readAsArrayBuffer(file);
 
-  $newTestCase.addEventListener("click", () => {
 
-    document.getElementById("testCases").childNodes.forEach(c => c.classList.remove("active"));
-    $newTestCase.classList.add("active");
-
-    currentTest = newTest;
-    showTestCase(newTest);
-  });
-
-  $testCases.appendChild($newTestCase);
-
-  tests.push(newTest);
-  currentTest = newTest;
 }
+
 
 document.getElementById("createTestCaseButton")
         .addEventListener("click", () => createNewTestCase());

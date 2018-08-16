@@ -10,7 +10,7 @@
 
       	<div class="col align-self-end">
 	      	<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#newTestModal">New Test</button>
-      		<button type="button" class="btn btn-success" id="runTestsButton">Run</button>
+      		<button type="button" class="btn btn-success" id="runTestsButton">Run all</button>
       	</div>
 
       </div>
