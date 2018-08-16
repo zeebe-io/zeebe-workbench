@@ -9,10 +9,12 @@ import AnimationModule from "./bpmn-js";
 
 import { queryAll as domQueryAll } from 'min-dom';
 
+import $ from "jquery";
+
 const history = [
-  { activitId: 'order-placed' },   // start event
-  { activitId: 'SequenceFlow_1ml1so0' },  // outgoing sequence flow
-  { activitId: 'collect-money' }    // activitId
+  { activityId: 'order-placed' },   // start event
+  { activityId: 'SequenceFlow_1ml1so0' },  // outgoing sequence flow
+  { activityId: 'collect-money' }    // activityId
 ]
 
 // --- functions
@@ -23,13 +25,13 @@ function renderHistory(animation, elementRegistry, tokenCount) {
   $history.innerHTML = '';
 
   history.forEach(activity => {
-    const element = elementRegistry.get(activity.activitId);
+    const element = elementRegistry.get(activity.activityId);
 
     const $entry = document.createElement("div");
 
     const type = element.type.split(":")[1];
 
-    $entry.innerHTML = activity.activitId + " (" + type + ")";
+    $entry.innerHTML = activity.activityId + " (" + type + ")";
     $entry.classList.add("entry");
 
     if (type === "SequenceFlow") {
@@ -101,7 +103,7 @@ function createNewTestCase() {
 		            }
 
                 currentTest.resource = {
-                  filename: file.name,
+                  name: file.name,
                   xml: binary,
 		            	content:  btoa(binary)
                 };
@@ -128,7 +130,7 @@ function createNewTestCase() {
 }
 
 document.getElementById("createTestCaseButton")
-        .addEventListener("click", createNewTestCase);
+        .addEventListener("click", () => createNewTestCase());
 
 function showTestCase(testCase) {
 
@@ -229,20 +231,41 @@ function renderTestCase(testCase) {
   testCase.commands.forEach(cmd => {
     const $newCommand = document.createElement("div");
 
-    $newCommand.innerHTML = "Complete Job '" + cmd.activitId + "' with Payload: " + cmd.payload;
+    $newCommand.innerHTML = "Complete Job '" + cmd.activityId + "' with Payload: " + cmd.payload;
     $commands.appendChild($newCommand);
   });
 }
 
-function createNewCommand(activitId, payload) {
+function createNewCommand(activityId, payload) {
 
   currentTest.commands.push({
-    activitId: activitId,
+    activityId: activityId,
     payload: payload,
   })
 
   renderTestCase(currentTest);
 }
+
+function runTestCases(tests) {
+
+  $.ajax({
+        type : 'POST',
+        url: '/run',
+        data:  JSON.stringify(tests),
+        contentType: 'application/json; charset=utf-8',
+        success: function (result) {
+        	console.log("TODO show result: " + result);
+        },
+        error: function (xhr, ajaxOptions, thrownError) {
+       	 console.log("failed to run tests: " + thrownError);
+        },
+   	 timeout: 60000,
+     crossDomain: true,
+	});
+};
+
+document.getElementById("runTestsButton")
+        .addEventListener("click", () => runTestCases(tests));
 
 // ---
 
@@ -252,7 +275,6 @@ var viewer = new BpmnViewer({
     AnimationModule
   ]
 });
-
 
 
 window.viewer = viewer;
