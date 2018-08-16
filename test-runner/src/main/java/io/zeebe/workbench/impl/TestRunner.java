@@ -9,6 +9,7 @@ import io.zeebe.gateway.ZeebeClient;
 import io.zeebe.gateway.api.clients.TopicClient;
 import io.zeebe.gateway.api.events.WorkflowInstanceEvent;
 import io.zeebe.gateway.api.events.WorkflowInstanceState;
+import io.zeebe.gateway.api.subscription.JobWorker;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.BpmnModelInstance;
 import io.zeebe.model.bpmn.instance.Process;
@@ -112,32 +113,33 @@ public class TestRunner implements Runner, AutoCloseable {
     final String bpmnProcessId = process.getId();
     final String startPayload = testCase.getStartPayload();
 
-    topicClient
-        .workflowClient()
-        .newCreateInstanceCommand()
-        .bpmnProcessId(bpmnProcessId)
-        .latestVersion()
-        .payload(startPayload)
-        .send()
-        .join();
+    final WorkflowInstanceEvent workflowInstanceEvent =
+        topicClient
+            .workflowClient()
+            .newCreateInstanceCommand()
+            .bpmnProcessId(bpmnProcessId)
+            .latestVersion()
+            .payload(startPayload)
+            .send()
+            .join();
 
     final List<Command> commands = testCase.getCommands();
     executeCommands(bpmnModelInstance, commands);
 
     final List<Verification> verifications = testCase.getVerifications();
     final List<FailedVerification> failedVerifications =
-        evaluateVerifications(testCase, bpmnProcessId, verifications);
+        evaluateVerifications(testCase, workflowInstanceEvent, verifications);
     result.addFailedVerifications(failedVerifications);
 
     return result;
   }
 
   private List<FailedVerification> evaluateVerifications(
-      TestCase testCase, String bpmnProcessId, List<Verification> verifications) {
+      TestCase testCase, WorkflowInstanceEvent instanceEvent, List<Verification> verifications) {
     List<FailedVerification> failedVerifications = Collections.EMPTY_LIST;
     if (verifications != null && !verifications.isEmpty()) {
       try {
-        failedVerifications = verify(testCase, bpmnProcessId, verifications);
+        failedVerifications = verify(testCase, instanceEvent, verifications);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -146,7 +148,7 @@ public class TestRunner implements Runner, AutoCloseable {
   }
 
   private List<FailedVerification> verify(
-      TestCase testCase, String bpmnProcessId, List<Verification> verifications)
+      TestCase testCase, WorkflowInstanceEvent instanceEvent, List<Verification> verifications)
       throws InterruptedException {
     final Map<String, Verification> verificationMap =
         verifications.stream().collect(Collectors.toMap(v -> v.getActivityId(), v -> v));
@@ -160,6 +162,11 @@ public class TestRunner implements Runner, AutoCloseable {
         .name(testCase.getName())
         .workflowInstanceEventHandler(
             workflowInstanceEvent -> {
+              if (workflowInstanceEvent.getWorkflowInstanceKey()
+                  != instanceEvent.getWorkflowInstanceKey()) {
+                return;
+              }
+
               final Verification verification =
                   verificationMap.get(workflowInstanceEvent.getActivityId());
 
@@ -184,10 +191,13 @@ public class TestRunner implements Runner, AutoCloseable {
               events.add(workflowInstanceEvent);
 
               if (workflowInstanceEvent.getState() == WorkflowInstanceState.ELEMENT_COMPLETED
-                  && workflowInstanceEvent.getActivityId().equals(bpmnProcessId)) {
+                  && workflowInstanceEvent
+                      .getActivityId()
+                      .equals(instanceEvent.getBpmnProcessId())) {
                 latch.countDown();
               }
             })
+        .startAtPosition(1, instanceEvent.getMetadata().getPosition())
         .open();
 
     latch.await(TEST_TIMEOUT, TEST_TIMEOUT_UNIT);
@@ -201,7 +211,6 @@ public class TestRunner implements Runner, AutoCloseable {
 
   private void executeCommands(BpmnModelInstance bpmnModelInstance, List<Command> commands) {
     if (commands != null && !commands.isEmpty()) {
-
       for (Command cmd : commands) {
         try {
           executeCommand(bpmnModelInstance, cmd);
@@ -229,18 +238,30 @@ public class TestRunner implements Runner, AutoCloseable {
               .singleResult();
       final String taskType = zeebeTaskDefinition.getType();
 
-      topicClient
-          .jobClient()
-          .newWorker()
-          .jobType(taskType)
-          .handler(
-              (jobClient, jobEvent) -> {
-                latch.countDown();
-                jobClient.newCompleteCommand(jobEvent).payload(cmd.getPayload()).send().join();
-              })
-          .open();
+      JobWorker jobWorker = null;
+      try {
+        jobWorker =
+            topicClient
+                .jobClient()
+                .newWorker()
+                .jobType(taskType)
+                .handler(
+                    (jobClient, jobEvent) -> {
+                      latch.countDown();
+                      jobClient
+                          .newCompleteCommand(jobEvent)
+                          .payload(cmd.getPayload())
+                          .send()
+                          .join();
+                    })
+                .open();
 
-      latch.await();
+        latch.await();
+      } finally {
+        if (jobWorker != null) {
+          jobWorker.close();
+        }
+      }
 
     } else {
       throw new IllegalArgumentException("Only service tasks are currently supported.");

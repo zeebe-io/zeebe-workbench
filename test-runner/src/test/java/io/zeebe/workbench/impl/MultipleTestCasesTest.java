@@ -62,6 +62,37 @@ public class MultipleTestCasesTest {
     assertThat(results.stream().flatMap(r -> r.getFailedVerifications().stream())).isEmpty();
   }
 
+  @Test
+  public void shouldRunMultipleTestCasesOnSameResource() {
+    // given
+    final List<TestCase> testCases = new ArrayList<>();
+
+    testCases.add(createTestCase("test-1", "PROCESS", "process.bpmn"));
+
+    final String startPayload = "{\"foo\":3}";
+    final Verification verification =
+        new Verification(
+            WorkflowInstanceState.ELEMENT_COMPLETED.name(), "{\"foo\":3, \"bar\":-1}", "PROCESS");
+    final TestCase failing =
+        new TestCase(
+            "test-2", "process.bpmn", startPayload, null, Collections.singletonList(verification));
+    testCases.add(failing);
+
+    // when
+    final List<TestResult> results = runner.run(resources, testCases);
+
+    // then
+    final TestResult result = results.get(0);
+    assertThat(result.getFailedVerifications()).isEmpty();
+
+    final TestResult failedTest = results.get(1);
+    assertThat(failedTest.getFailedVerifications().size()).isEqualTo(1);
+    final Verification failedVerification =
+        failedTest.getFailedVerifications().get(0).getVerification();
+    assertThat(failedVerification.getActivityId()).isEqualTo("PROCESS");
+    assertThat(failedVerification.getExpectedIntent()).isEqualTo("ELEMENT_COMPLETED");
+  }
+
   private TestCase createTestCase(String id, String bpmnProcessId, String processName) {
     final String startPayload = "{\"foo\":3}";
     final String completePayload = "{\"bar\":-1}";
