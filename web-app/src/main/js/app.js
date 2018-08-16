@@ -28,6 +28,8 @@ function createNewTestCase() {
 
   $newTestCase.innerHTML = $name.value;
   $newTestCase.classList.add("entry");
+
+  document.getElementById("testCases").childNodes.forEach(c => c.classList.remove("active"));
   $newTestCase.classList.add("active");
 
   const newTest = {
@@ -61,9 +63,8 @@ function createNewTestCase() {
   reader.readAsArrayBuffer(file);
 
   $newTestCase.addEventListener("click", () => {
-    const $entries = domQueryAll("#testCases.entry");
-    $entries.forEach($e => $e.classList.remove("active"));
 
+    document.getElementById("testCases").childNodes.forEach(c => c.classList.remove("active"));
     $newTestCase.classList.add("active");
 
     currentTest = newTest;
@@ -153,7 +154,7 @@ function showTestCase(testCase) {
       });
 
       document.getElementById("addCommandButton")
-              .addEventListener("click", function(e) {
+              .addEventListener("click",() => {
                 const $payload = document.getElementById("job-payload");
                 createNewCommand(activityId, $payload.value)
 

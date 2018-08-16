@@ -82,9 +82,13 @@ html, body, #testCases {
   height: 750px;
 }
 
+#testCases .entry {
+   cursor: pointer;
+}
+
 #testCases .entry :hover,
 #testCases .entry.active {
-   background-color: #0d8dba;
-   cursor: pointer;
+   color: #0d8dba;
+   font-weight: bold;
 }
 
