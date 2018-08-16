@@ -17,7 +17,7 @@ val commonDependencies = Seq(
   "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.9.0" % "test"
 )
 
-val zeebeVersion = "0.11.0"
+val zeebeVersion = "0.12.0-SNAPSHOT"
 val scalatraVersion = "2.6.2"
 
 lazy val root = (project in file("."))
@@ -32,12 +32,12 @@ lazy val testRunner = (project in file("test-runner"))
     description := "The test runner",
     libraryDependencies ++= commonDependencies,
     libraryDependencies ++= Seq(
-      "io.zeebe" % "zeebe-client-java" % zeebeVersion,
+      "io.zeebe" % "zeebe-gateway" % zeebeVersion,
+      "io.zeebe" % "zeebe-broker-core" % zeebeVersion,
       "org.apache.logging.log4j" % "log4j-api" % "2.9.0",
       "org.apache.logging.log4j" % "log4j-core" % "2.9.0",
       "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.9.0",
-      "io.zeebe" % "zeebe-test" % zeebeVersion % "test",
-      "io.zeebe" % "zeebe-broker-core" % zeebeVersion % "test"
+      "io.zeebe" % "zeebe-test" % zeebeVersion % "test"
     )
   )
 

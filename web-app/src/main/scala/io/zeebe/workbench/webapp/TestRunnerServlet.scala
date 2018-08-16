@@ -36,14 +36,12 @@ class TestRunnerServlet
   // views
   get("/") {
     contentType = "text/html"
-
-    ssp("index", "foo" -> "bar")
+    ssp("index")
   }
 
-  get("/bpmn-js-test") {
+  get("/replay") {
     contentType = "text/html"
-
-    ssp("bpmn-js-test")
+    ssp("replay")
   }
 
   // REST endpoints

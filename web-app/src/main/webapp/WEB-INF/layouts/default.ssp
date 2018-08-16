@@ -1,17 +1,59 @@
 <%@ var body: String %>
+<%@ var page: String %>
 
 <!doctype html>
 <html lang="en">
 <head>
+  <!-- Required meta tags -->
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
   
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" /> 
+
+	<!-- Custom styles -->
   <link rel="stylesheet" type="text/css" href="/css/style.css" /> 
   
+  <link rel="icon" href="/img/favicon.ico">
+    
   <title>Zeebe Workbench</title>
 </head>
 <body>
-	${unescape(body)}
+
+  	<header>
+  		<nav class="navbar navbar-expand-md navbar-light bg-white fixed-top border-bottom">
+	      <a class="navbar-brand" href="#">
+		    <img src="/img/logo.png" width="30" height="30" class="d-inline-block align-top" alt="">
+		    Zeebe Workbench
+		  </a>
+		  
+	      <div class="collapse navbar-collapse" id="navbarsExampleDefault">
+	        <ul class="navbar-nav mr-auto">
+	          <li class="nav-item <%= if(page == "tests") "active" %>">
+	            <a class="nav-link" href="/">Tests Cases</a>
+	          </li>
+	          <li class="nav-item <%= if(page == "replay") "active" %>">
+	            <a class="nav-link" href="/replay">Replay Mode</a>
+	          </li>
+	        </ul>
+	      </div>
+	    </nav>
+    </header>    
+
+    <main role="main" class="container-fluid">
+
+		${unescape(body)}
+		
+    </main><!-- /.container -->
+	
+	<!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+	<script src="/js/jquery-3.3.1.slim.min.js"></script>
+	<script src="/js/popper.min.js"></script>
+	<script src="/js/bootstrap.min.js"></script>
+	
 </body>
 </html>

@@ -64,7 +64,187 @@ function renderHistory(animation, elementRegistry, tokenCount) {
   });
 }
 
-// --- 
+var tests = [];
+var currentTest = null;
+
+var openOverlay = '';
+
+function createNewTestCase() {
+
+  const $name = document.getElementById("newTestName");
+  const $resource = document.getElementById("newTestResource");
+
+  const $testCases = document.getElementById("testCases");
+  const $newTestCase = document.createElement("div");
+
+  $newTestCase.innerHTML = $name.value;
+  $newTestCase.classList.add("entry");
+  $newTestCase.classList.add("active");
+
+  const newTest = {
+      name : $name.value,
+      resource : null,
+      commands: [],
+      verifications: []
+  };
+
+  var file = $resource.files[0];
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+
+		            var binary = '';
+		            var bytes = new Uint8Array( e.target.result );
+		            var len = bytes.byteLength;
+		            for (var j = 0; j < len; j++) {
+		                binary += String.fromCharCode( bytes[ j ] );
+		            }
+
+                currentTest.resource = {
+                  filename: file.name,
+                  xml: binary,
+		            	content:  btoa(binary)
+                };
+
+
+                showTestCase(newTest);
+	};
+  reader.readAsArrayBuffer(file);
+
+  $newTestCase.addEventListener("click", () => {
+    const $entries = domQueryAll("#testCases.entry");
+    $entries.forEach($e => $e.classList.remove("active"));
+
+    $newTestCase.classList.add("active");
+
+    currentTest = newTest;
+    showTestCase(newTest);
+  });
+
+  $testCases.appendChild($newTestCase);
+
+  tests.push(newTest);
+  currentTest = newTest;
+}
+
+document.getElementById("createTestCaseButton")
+        .addEventListener("click", createNewTestCase);
+
+function showTestCase(testCase) {
+
+  viewer.importXML(testCase.resource.xml, function(err) {
+
+   if (!err) {
+      viewer.get('canvas').zoom('fit-viewport');
+    } else {
+      console.log('something went wrong:', err);
+    }
+
+    const canvas = viewer.get("canvas"),
+          elementRegistry = viewer.get("elementRegistry"),
+          animation = viewer.get("animation"),
+          tokenCount = viewer.get("tokenCount"),
+          eventBus = viewer.get("eventBus"),
+          overlays = viewer.get("overlays");
+
+    canvas.zoom('fit-viewport');
+
+    eventBus.on("element.hover", function(e) {
+
+      const activityId = e.element.id;
+      const activityType = e.element.type;
+
+
+      if (activityType == "bpmn:ServiceTask") {
+        canvas.addMarker(activityId, 'diagram-marker');
+      }
+    });
+
+    eventBus.on("element.out", function(e) {
+
+      const activityId = e.element.id;
+      const activityType = e.element.type;
+
+      if (activityType == "bpmn:ServiceTask") {
+        canvas.removeMarker(activityId, 'diagram-marker');
+      }
+    });
+
+
+
+    eventBus.on("element.click", function(e) {
+      // e.element = the model element
+      // e.gfx = the graphical element
+
+      const activityId = e.element.id;
+      const activityName = e.element.businessObject.name;
+      const activityType = e.element.type;
+
+      if (activityType != "bpmn:ServiceTask") {
+        return;
+      }
+
+      var overlayHtml = $('<div class="diagram-note row">'+
+      '<div class="col"><p class="col">Complete with payload:</p></div>' +
+      '<div class="col"><textarea id="job-payload" class="form-control col">{}</textarea></div>' +
+      '<div class="col"><button type="button" class="btn btn-light" id="addCommandButton">Add</button></div>' +
+      '</div>');
+
+      if (openOverlay != '') {
+        overlays.remove(openOverlay);
+      }
+
+      // attach the overlayHtml to a node
+      openOverlay = overlays.add(activityId, {
+        position: {
+          bottom: 0,
+          right: 0
+        },
+        html: overlayHtml
+      });
+
+      document.getElementById("addCommandButton")
+              .addEventListener("click", function(e) {
+                const $payload = document.getElementById("job-payload");
+                createNewCommand(activityId, $payload.value)
+
+                overlays.remove(openOverlay);
+                openOverlay = '';
+              });
+
+
+    });
+
+    renderTestCase(testCase);
+  });
+}
+
+function renderTestCase(testCase) {
+  const $commands = document.getElementById("commands");
+
+  while ($commands.firstChild) {
+    $commands.removeChild($commands.firstChild);
+  }
+
+  testCase.commands.forEach(cmd => {
+    const $newCommand = document.createElement("div");
+
+    $newCommand.innerHTML = "Complete Job '" + cmd.activitId + "' with Payload: " + cmd.payload;
+    $commands.appendChild($newCommand);
+  });
+}
+
+function createNewCommand(activitId, payload) {
+
+  currentTest.commands.push({
+    activitId: activitId,
+    payload: payload,
+  })
+
+  renderTestCase(currentTest);
+}
+
+// ---
 
 var viewer = new BpmnViewer({
   container: '#canvas',
@@ -73,25 +253,8 @@ var viewer = new BpmnViewer({
   ]
 });
 
-viewer.importXML(diagram, function(err) {
 
-
- if (!err) {
-    console.log('success!');
-    viewer.get('canvas').zoom('fit-viewport');
-  } else {
-    console.log('something went wrong:', err);
-  }
-
-  const canvas = viewer.get("canvas"),
-        elementRegistry = viewer.get("elementRegistry"),
-        animation = viewer.get("animation"),
-        tokenCount = viewer.get("tokenCount");
-
-  canvas.zoom('fit-viewport');
-
-  renderHistory(animation, elementRegistry, tokenCount);
-
-});
 
 window.viewer = viewer;
+
+window.tests = tests;
