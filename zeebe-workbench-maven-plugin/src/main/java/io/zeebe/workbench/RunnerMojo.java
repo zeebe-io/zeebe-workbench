@@ -16,6 +16,7 @@ package io.zeebe.workbench;
  * limitations under the License.
  */
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.zeebe.workbench.impl.TestRunner;
 import org.apache.maven.plugin.AbstractMojo;
@@ -40,6 +41,8 @@ public class RunnerMojo extends AbstractMojo {
   private final List<FailedVerification> globalFailedVerifications = new ArrayList<>();
 
   public RunnerMojo() {
+    mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+
     logBuilder
         .append("\n\n-------------------------------------------------------")
         .append("\nZ E E B E - T E S T S\n")
@@ -132,8 +135,8 @@ public class RunnerMojo extends AbstractMojo {
         } else if (file.getName().contains(".case")) {
 
           getLog().debug("Read test case");
-          final TestCase testCase1 = mapper.readValue(file, TestCase.class);
-          testCases.add(testCase1);
+          final TestCase testCase = mapper.readValue(file, TestCase.class);
+          testCases.add(testCase);
         }
       } catch (Exception ex) {
         throw new MojoExecutionException("Failed to open file: " + file.getName(), ex);

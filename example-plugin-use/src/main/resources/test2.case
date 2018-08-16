@@ -1,15 +1,15 @@
 {
   "name": "test2",
   "resourceName": "orderProcess.bpmn",
-  "startPayload": "{}",
+  "startPayload": {},
   "commands": [
     {
       "activityId": "collect-money",
-      "payload": "{}"
+      "payload": {}
     },
     {
       "activityId": "ship-parcel",
-      "payload": "{}"
+      "payload": {}
     }
   ],
   "verifications": [

@@ -46,7 +46,7 @@ public class StartWorkflowInstanceTest {
   @Test
   public void shouldStartWorkflowInstance() throws Exception {
     // given
-    final TestCase testCase = new TestCase("test1", "process.bpmn", null, null, null);
+    final TestCase testCase = new TestCase("test1", "process.bpmn", (String) null, null, null);
 
     // when
     runner.run(resource, testCase);

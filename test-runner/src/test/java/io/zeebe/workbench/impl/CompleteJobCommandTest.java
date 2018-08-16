@@ -51,7 +51,7 @@ public class CompleteJobCommandTest {
   public void shouldCompleteJob() throws Exception {
     // given
     final String startPayload = "{\"foo\":3}";
-    final Command command = new Command("serviceTask", null);
+    final Command command = new Command("serviceTask", (String) null);
     final TestCase testCase =
         new TestCase(
             "test1", "process.bpmn", startPayload, Collections.singletonList(command), null);
