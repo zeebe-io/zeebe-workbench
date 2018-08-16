@@ -190,11 +190,11 @@ function showTestCase(testCase) {
       const activityName = e.element.businessObject.name;
       const activityType = e.element.type;
 
-      const showOverlay = function(activityId, title, onClick) {
+      const showOverlay = function(activityId, title, payload, onClick) {
 
         var overlayHtml = $('<div class="diagram-note row">'+
         '<div class="col"><p class="col">' + title + '</p></div>' +
-        '<div class="col"><textarea id="command-payload" class="form-control col">{}</textarea></div>' +
+        '<div class="col"><textarea id="command-payload" class="form-control col">' + payload + '</textarea></div>' +
         '<div class="col"><button type="button" class="btn btn-light" id="addCommandButton">Done</button></div>' +
         '</div>');
 
@@ -220,32 +220,46 @@ function showTestCase(testCase) {
 
       if (activityType == "bpmn:ServiceTask") {
 
-        showOverlay(activityId, "Complete with payload:", payload => {
-          currentTest.commands.push({
+        var command = null;
+        if (testCase.commands.filter(c => c.activityId == activityId).length > 0) {
+          command = testCase.commands.filter(c => c.activityId == activityId)[0];
+        } else {
+          command = {
             activityId: activityId,
-            payload: payload,
-          });
+            payload: "{}"
+          };
+          testCase.commands.push(command);
+        }
+
+        showOverlay(activityId, "Complete with payload:", command.payload, payload => {
+          command.payload = payload;
 
           renderTestCase(currentTest);
         });
 
       } else if (activityType == "bpmn:StartEvent") {
 
-        showOverlay(activityId, "Create instance with payload:", payload => {
-          currentTest.startPayload = payload;
+        showOverlay(activityId, "Create instance with payload:", currentTest.startPayload, payload => {
+          testCase.startPayload = payload;
           renderTestCase(currentTest);
         });
 
       } else if (activityType == "bpmn:EndEvent") {
 
-      showOverlay(activityId, "Verify completed with payload:", payload => {
+        var verification = null;
+        if (testCase.verifications.filter(v => v.activityId == activityId).length > 0) {
+          verification = testCase.verifications.filter(v => v.activityId == activityId)[0];
+        } else {
+          verification = {
+            activityId: activityId,
+            expectedPayload: "{}",
+            expectedIntent: "END_EVENT_OCCURRED"
+          };
+          testCase.verifications.push(verification);
+        }
 
-        currentTest.verifications.push({
-          activityId: activityId,
-          expectedPayload: payload,
-          expectedIntent: "END_EVENT_OCCURRED"
-        });
-
+      showOverlay(activityId, "Verify completed with payload:", verification.expectedPayload, payload => {
+        verification.expectedPayload = payload;
         renderTestCase(currentTest);
       });
     }
