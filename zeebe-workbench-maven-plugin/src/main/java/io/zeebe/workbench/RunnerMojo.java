@@ -43,6 +43,8 @@ public class RunnerMojo extends AbstractMojo {
   private File outputDir;
 
   public void execute() throws MojoExecutionException {
+    System.setProperty("org.slf4j.simpleLogger.log.io.zeebe", "error");
+
     if (resourcesDir != null && resourcesDir.isDirectory()) {
       final File[] files = resourcesDir.listFiles();
       if (files != null && files.length > 0) {
