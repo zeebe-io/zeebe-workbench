@@ -55,7 +55,7 @@ html, body, #canvas, #canvas > div {
  }
 
  @keyframes jump {
-   50% { top: 5px; }
+   50% { top: 50px; }
  }
  
  .diagram-note {

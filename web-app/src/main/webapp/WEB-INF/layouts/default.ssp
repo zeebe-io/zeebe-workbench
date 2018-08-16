@@ -35,9 +35,11 @@
 	          <li class="nav-item <%= if(page == "tests") "active" %>">
 	            <a class="nav-link" href="/">Tests Cases</a>
 	          </li>
+            <!--
 	          <li class="nav-item <%= if(page == "replay") "active" %>">
 	            <a class="nav-link" href="/replay">Replay Mode</a>
 	          </li>
+            -->
 	        </ul>
 	      </div>
 	    </nav>

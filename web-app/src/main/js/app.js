@@ -155,6 +155,9 @@ function showTestCase(testCase) {
           eventBus = viewer.get("eventBus"),
           overlays = viewer.get("overlays");
 
+    window.elementRegistry = elementRegistry;
+    window.tokenCount = tokenCount;
+
     canvas.zoom('fit-viewport');
 
     eventBus.on("element.hover", function(e) {
@@ -367,6 +370,22 @@ function showTestResults(results) {
   });
 
   renderTestCase(currentTest);
+
+  // --------- token party
+  if (window.tokenParty == true) {
+    elementRegistry.forEach(element => {
+      tokenCount.removeTokenCount(element);
+    });
+
+    if (failures == 0) {
+        elementRegistry.forEach(element => {
+          if (!element.waypoint && Math.random() > 0.25) {
+            const symbols = ["☕", "✨", "✆", "✋", "❗", "➠", "☂", "♨", "♻", "⚛"]
+            tokenCount.addTokenCount(element, symbols[Math.round(Math.random() * (symbols.length - 1))]); // ✨
+          }
+        });
+    }
+  }
 }
 
 // ---
