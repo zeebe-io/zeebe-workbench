@@ -124,14 +124,14 @@ public class TestRunner implements Runner, AutoCloseable {
     final List<Verification> verifications = testCase.getVerifications();
     final List<FailedVerification> failedVerifications =
         evaluateVerifications(testCase, verifications);
-    result.addFailedVerfifications(failedVerifications);
+    result.addFailedVerifications(failedVerifications);
 
     return result;
   }
 
   private List<FailedVerification> evaluateVerifications(
       TestCase testCase, List<Verification> verifications) {
-    List<FailedVerification> failedVerifications = null;
+    List<FailedVerification> failedVerifications = Collections.EMPTY_LIST;
     if (verifications != null && !verifications.isEmpty()) {
       try {
         failedVerifications = verify(testCase, verifications);

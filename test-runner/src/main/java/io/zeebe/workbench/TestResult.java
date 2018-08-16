@@ -20,7 +20,7 @@ public class TestResult {
     return failedVerifications;
   }
 
-  public void addFailedVerfifications(List<FailedVerification> failedVerifications) {
+  public void addFailedVerifications(List<FailedVerification> failedVerifications) {
     this.failedVerifications.addAll(failedVerifications);
   }
 }
