@@ -4,7 +4,7 @@
   "startPayload": "{}",
   "commands": [
     {
-      "activityId": "serviceTask",
+      "activityId": "collect-money",
       "payload": "{}"
     }
   ],

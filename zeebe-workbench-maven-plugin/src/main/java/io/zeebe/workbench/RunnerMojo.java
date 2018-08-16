@@ -32,11 +32,15 @@ import java.util.List;
 @Mojo(name = "runner", defaultPhase = LifecyclePhase.TEST)
 public class RunnerMojo extends AbstractMojo {
 
+  private final ObjectMapper mapper = new ObjectMapper();
   private final List<WorkflowResource> workflowResources = new ArrayList<>();
   private final List<TestCase> testCases = new ArrayList<>();
 
   @Parameter(property = "resourcesDir", required = true)
   private File resourcesDir;
+
+  @Parameter(property = "outputDir", defaultValue = "${project.build.target}")
+  private File outputDir;
 
   public void execute() throws MojoExecutionException {
     if (resourcesDir != null && resourcesDir.isDirectory()) {
@@ -45,9 +49,15 @@ public class RunnerMojo extends AbstractMojo {
         readResources(files);
 
         if (!testCases.isEmpty()) {
-
           try (final TestRunner testRunner = new TestRunner()) {
-            testRunner.run(workflowResources, testCases);
+            final List<TestResult> testResults = testRunner.run(workflowResources, testCases);
+
+            for (TestResult result : testResults) {
+              logResult(result);
+              final File resultFile = new File(outputDir, result.getName() + ".result");
+              mapper.writeValue(resultFile, result);
+            }
+
           } catch (Exception ex) {
             throw new MojoExecutionException("Problem in test case execution.", ex);
           }
@@ -55,6 +65,18 @@ public class RunnerMojo extends AbstractMojo {
       }
     } else {
       throw new MojoExecutionException("Property 'resourcesDir' need to be a directory.");
+    }
+  }
+
+  private void logResult(TestResult result) {
+    final StringBuilder builder = new StringBuilder("Test case ").append(result.getName());
+    final List<FailedVerification> failedVerifications = result.getFailedVerifications();
+    if (failedVerifications.isEmpty()) {
+      builder.append(" successful.");
+      getLog().info(builder.toString());
+    } else {
+      builder.append(" failed.");
+      getLog().error(builder.toString());
     }
   }
 
@@ -71,19 +93,7 @@ public class RunnerMojo extends AbstractMojo {
         } else if (file.getName().contains(".case")) {
 
           getLog().debug("Read test case");
-          final byte[] bytes = Files.readAllBytes(file.toPath());
-          getLog().debug(new String(bytes));
-
-          final ObjectMapper mapper = new ObjectMapper();
-          final TestCase testCase1 = mapper.readValue(bytes, TestCase.class);
-
-          //
-          //          final JsonNode jsonNode = mapper.readTree(bytes);
-          //
-          //          getLog().debug(jsonNode.get("name").asText());
-          //          getLog().debug(jsonNode.toString());
-          //
-          //          final TestCase testCase = mapper.treeToValue(jsonNode, TestCase.class);
+          final TestCase testCase1 = mapper.readValue(file, TestCase.class);
           testCases.add(testCase1);
         }
       } catch (Exception ex) {
