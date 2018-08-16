@@ -22,6 +22,7 @@ function createNewTestCase() {
 
   const $name = document.getElementById("newTestName");
   const $resource = document.getElementById("newTestResource");
+  const $startPayload = document.getElementById("startPayload");
 
   const $testCases = document.getElementById("testCases");
   const $newTestCase = document.createElement("div");
@@ -35,7 +36,7 @@ function createNewTestCase() {
   const newTest = {
       name : $name.value,
       resource : null,
-      startPayload: null,
+      startPayload: $startPayload.value,
       commands: [],
       verifications: []
   };
