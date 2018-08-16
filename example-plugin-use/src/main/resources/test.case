@@ -6,6 +6,14 @@
     {
       "activityId": "collect-money",
       "payload": "{}"
+    },
+    {
+      "activityId": "fetch-items",
+      "payload": "{}"
+    },
+    {
+      "activityId": "ship-parcel",
+      "payload": "{}"
     }
   ],
   "verifications": [
