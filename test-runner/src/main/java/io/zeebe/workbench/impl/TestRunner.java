@@ -30,6 +30,9 @@ import java.util.stream.Collectors;
 
 public class TestRunner implements Runner, AutoCloseable {
 
+  public static final int TEST_TIMEOUT = 250;
+  public static final TimeUnit TEST_TIMEOUT_UNIT = TimeUnit.MILLISECONDS;
+
   private final String tempFolder;
   private final Broker broker;
 
@@ -187,7 +190,7 @@ public class TestRunner implements Runner, AutoCloseable {
             })
         .open();
 
-    latch.await(5, TimeUnit.SECONDS);
+    latch.await(TEST_TIMEOUT, TEST_TIMEOUT_UNIT);
 
     final Collection<Verification> remainingVerifications = verificationMap.values();
     for (Verification verification : remainingVerifications) {
