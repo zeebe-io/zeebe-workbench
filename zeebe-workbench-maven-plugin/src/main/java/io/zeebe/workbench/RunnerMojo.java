@@ -44,8 +44,8 @@ public class RunnerMojo extends AbstractMojo {
     mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
 
     logBuilder
-        .append("\n\n-------------------------------------------------------")
-        .append("\nZ E E B E - T E S T S\n")
+        .append("\n\n\u001b[97m-------------------------------------------------------")
+        .append("\n\t\tZ E E B E - T E S T S\n")
         .append("-------------------------------------------------------");
   }
 
@@ -79,11 +79,15 @@ public class RunnerMojo extends AbstractMojo {
             throw new MojoExecutionException("Problem in test case execution.", ex);
           }
 
-          logBuilder.append("\n\nResults:\n\n");
+          logBuilder.append("\u001b[0m");
+
+          logBuilder.append("\n\n\u001b[97mResults:\n\n");
           final String resultLog = "Tests run: %d failed: %d";
           final int failedCount = globalFailedVerifications.size();
           logBuilder.append(String.format(resultLog, testCases.size(), failedCount));
 
+          // reset
+          logBuilder.append("\u001b[0m");
           getLog().info(logBuilder.toString());
 
           if (failedCount > 0) {
@@ -97,12 +101,12 @@ public class RunnerMojo extends AbstractMojo {
   }
 
   private void logResult(TestResult result) throws MojoExecutionException {
-    logBuilder.append("\nTest case '").append(result.getName()).append("'");
+
     final List<FailedVerification> failedVerifications = result.getFailedVerifications();
     if (failedVerifications.isEmpty()) {
-      logBuilder.append(" successful.");
+      logBuilder.append("\n\u001b[92mTest case '").append(result.getName()).append("' successful.");
     } else {
-      logBuilder.append(" failed.");
+      logBuilder.append("\n\u001b[91mTest case '").append(result.getName()).append("' failed.");
       for (FailedVerification failedVerification : failedVerifications) {
         logBuilder.append("\n\tFailed verification: ");
         final String actualPayLoad = failedVerification.getActualPayLoad();
