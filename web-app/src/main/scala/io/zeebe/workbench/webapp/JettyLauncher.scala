@@ -5,7 +5,7 @@ import org.eclipse.jetty.servlet.{ DefaultServlet, ServletContextHandler }
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
 
-object DmnEngineRestLauncher {
+object JettyLauncher {
 
   def main(args: Array[String]) {
     val port = System.getProperty("port", "8080").toInt

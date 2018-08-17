@@ -103,7 +103,7 @@
                     </descriptors>
                     <archive>
                         <manifest>
-                            <mainClass>org.camunda.dmn.rest.DmnEngineRestLauncher</mainClass>
+                            <mainClass>io.zeebe.workbench.webapp.JettyLauncher</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
