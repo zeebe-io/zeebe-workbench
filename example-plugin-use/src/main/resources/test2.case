@@ -15,7 +15,7 @@
   "verifications": [
     {
       "expectedIntent": "ELEMENT_COMPLETED",
-      "expectedPayload": "{}",
+      "expectedPayload": {},
       "activityId": "order-process"
     }
   ]
