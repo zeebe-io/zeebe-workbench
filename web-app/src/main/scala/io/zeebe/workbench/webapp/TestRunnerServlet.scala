@@ -1,7 +1,7 @@
 package io.zeebe.workbench.webapp
 
 import org.scalatra._
-import org.json4s.{ DefaultFormats, Formats }
+import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.json._
 import org.scalatra.servlet.{
   FileUploadSupport,
@@ -21,25 +21,33 @@ object TestRunnerServlet {
   // JSON data objects
   case class TestCases(tests: Iterable[TestCase])
 
-  case class TestCase(name: String, resource: TestResource, startPayload: String, commands: List[TestCommand], verifications: List[TestVerification])
+  case class TestCase(name: String,
+                      resource: TestResource,
+                      startPayload: String,
+                      commands: List[TestCommand],
+                      verifications: List[TestVerification])
 
   case class TestResource(name: String, xml: String, content: Any)
 
   case class TestCommand(activityId: String, payload: String)
 
-  case class TestVerification(expectedIntent: String, expectedPayload: String, activityId: String)
+  case class TestVerification(expectedIntent: String,
+                              expectedPayload: String,
+                              activityId: String)
 
-  case class TestResult(name: String, failedVerifications: List[FailedVerification])
+  case class TestResult(name: String,
+                        failedVerifications: List[FailedVerification])
 
-  case class FailedVerification(activityId: String, expectedPayload: String, actualPayLoad: String)
+  case class FailedVerification(activityId: String,
+                                expectedPayload: String,
+                                actualPayLoad: String)
 
 }
 
 class TestRunnerServlet
-  extends ScalatraServlet
-  with JacksonJsonSupport
-  with FileUploadSupport
-  with ScalateSupport {
+    extends ScalatraServlet
+    with JacksonJsonSupport
+    with FileUploadSupport {
 
   import TestRunnerServlet._
 
@@ -58,39 +66,40 @@ class TestRunnerServlet
     //contentType = formats("json")
   }
 
-  // views
-  get("/") {
-    contentType = "text/html"
-    ssp("index")
-  }
-
-  get("/replay") {
-    contentType = "text/html"
-    ssp("replay")
-  }
-
   // REST endpoints
   post("/run") {
     contentType = formats("json")
 
     val testCases = parsedBody.extract[List[TestCase]]
 
-    val resources = testCases.map(t => new WorkflowResource(t.resource.xml.getBytes, t.resource.name))
+    val resources = testCases.map(t =>
+      new WorkflowResource(t.resource.xml.getBytes, t.resource.name))
     val tests = testCases.map(t => {
 
       val commands = t.commands.map(c => new Command(c.activityId, c.payload))
-      val verifications = t.verifications.map(v => new Verification(v.expectedIntent, v.expectedPayload, v.activityId))
+      val verifications = t.verifications.map(v =>
+        new Verification(v.expectedIntent, v.expectedPayload, v.activityId))
 
-      new io.zeebe.workbench.TestCase(t.name, t.resource.name, t.startPayload, commands.asJava, verifications.asJava)
+      new io.zeebe.workbench.TestCase(t.name,
+                                      t.resource.name,
+                                      t.startPayload,
+                                      commands.asJava,
+                                      verifications.asJava)
     })
 
     val result = runner.run(resources.asJava, tests.asJava)
 
-    result.asScala.map(r => {
-      val verifications = r.getFailedVerifications.asScala.map(v => new FailedVerification(v.getVerification.getActivityId, v.getVerification.getExpectedPayload, v.getActualPayLoad))
+    result.asScala
+      .map(r => {
+        val verifications = r.getFailedVerifications.asScala.map(
+          v =>
+            new FailedVerification(v.getVerification.getActivityId,
+                                   v.getVerification.getExpectedPayload,
+                                   v.getActualPayLoad))
 
-      new TestResult(r.getName, verifications.toList)
-    }).toList
+        new TestResult(r.getName, verifications.toList)
+      })
+      .toList
   }
 
 }

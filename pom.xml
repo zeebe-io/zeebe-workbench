@@ -31,7 +31,7 @@
         <module>test-runner</module>
         <module>web-app</module>
         <module>zeebe-workbench-maven-plugin</module>
-        <module>example-plugin-use</module>
+        <!-- <module>example-plugin-use</module> -->
     </modules>
 
     <dependencyManagement>

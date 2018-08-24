@@ -1,7 +1,0 @@
-<% attributes("page") = "replay" %>
-
-<div id="canvas"></div>
-
-<div id="history">History</div>
-
-<script src="/js/app.bundled.js"></script>
