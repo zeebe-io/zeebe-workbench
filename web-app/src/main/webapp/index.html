@@ -40,62 +40,95 @@
 
 	<main role="main" class="container-fluid">
 
+	<div class="row" style="height:100%;">
 
-	<div class="row">
-		<div class="col-3 border-right">
-			<div class="row border-bottom">
-				<div class="col">Tests</div>
+		<!-- test cases and results -->
+		<div class="col-md-3 border-right" style="height:100%;">
+				<!-- header -->
+				<div class="row" style="margin-bottom:10px;">
 
-				<div class="col align-self-end">
-					<button type="button" class="btn btn-primary" data-toggle="modal"
-						data-target="#newTestModal">New Test</button>
-					<button type="button" class="btn btn-success" id="runTestsButton">Run
-						all</button>
-				</div>
-
-			</div>
-
-			<div id="testCases" class="col"></div>
-
-			<div class="row border-top">
-
-				<div class="col progress">
-					<div id="testResultProgressSuccess" class="progress-bar bg-success"
-						role="progressbar" style="width: 0%" aria-valuenow="25"
-						aria-valuemin="0" aria-valuemax="100"></div>
-					<div id="testResultProgressFailures" class="progress-bar bg-danger"
-						role="progressbar" style="width: 0%" aria-valuenow="25"
-						aria-valuemin="0" aria-valuemax="100"></div>
-				</div>
-
-				<div class="w-100"></div>
-				<div class="col">
-					Runs: <span id="testRuns">0</span>
-				</div>
-				<div class="col">
-					Failures: <span id="testFailures">0</span>
-				</div>
-
-			</div>
-
-		</div>
-		<div class="col">
-			<div class="row">
-				<div class="col">
-					<div id="canvas"></div>
-				</div>
-				<div class="w-100"></div>
-				<div class="col">
-					<div class="row border-bottom">
-						<p>Commands:</p>
+					<div class="col-sm">
+						<h4>Tests</h4>
 					</div>
 
-					<div id="commands"></div>
+					<!-- actions -->
+					<div class="col-sm-3 align-self-end">
 
+						<button type="button" class="btn btn-primary" data-toggle="modal"
+							data-target="#newTestModal" title="New test case">+</button>
+
+							<button type="button" class="btn btn-success" title="Run all tests" onclick="runAllTests()">▷</button>
+					</div>
+				</div>
+
+				<!-- list of test cases -->
+				<div class="row" style="height:100%;max-height:100%;overflow:overlay;">
+					<div class="col-md">
+
+						<table class="table table-hover">
+							<col width="10%">
+	  					<col width="90%">
+						  <tbody id="testCases"></tbody>
+						</table>
+
+					</div>
+				</div>
+
+				<!-- test results -->
+				<div class="row border-top">
+
+					<div class="col-md progress">
+						<div id="testResultProgressSuccess" class="progress-bar bg-success"
+							role="progressbar" style="width: 0%" aria-valuenow="25"
+							aria-valuemin="0" aria-valuemax="100"></div>
+						<div id="testResultProgressFailures" class="progress-bar bg-danger"
+							role="progressbar" style="width: 0%" aria-valuenow="25"
+							aria-valuemin="0" aria-valuemax="100"></div>
+					</div>
+
+					<div class="w-100"></div>
+					<div class="col-md">
+						Runs: <span id="testRuns">0</span>
+					</div>
+					<div class="col-md">
+						Failures: <span id="testFailures">0</span>
+					</div>
+				</div>
+
+		</div>
+
+		<!-- diagram and selected test case -->
+		<div class="col-md" style="height:100%;">
+
+			<!-- actions -->
+			<div class="row">
+				<div class="col-md">
+					<h5 id="test-name"></h5>
+				</div>
+
+				<div class="col-sm-2 align-self-end">
+
+						<button type="button" class="btn btn-success" title="Run single test" onclick="runSingleTest()">▷</button>
+
+						<button type="button" class="btn btn-danger" title="Delete test case" onclick="removeTestCase()">🗑</button>
+				</div>
+			</div>
+
+			<div class="row" style="height:65%;">
+				<!-- diagram -->
+				<div class="col-md">
+					<div id="canvas"></div>
+				</div>
+			</div>
+				<!-- commands and verifications -->
+			<div class="row">
+				<div class="col-md">
+					<ul id="commands" class="list-group"></ul>
 				</div>
 
 			</div>
 		</div>
+
 	</div>
 
 	<div class="modal fade" id="newTestModal" tabindex="-1" role="dialog"
@@ -131,7 +164,7 @@
 				<div class="modal-footer">
 					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 					<button type="button" class="btn btn-primary" data-dismiss="modal"
-						id="createTestCaseButton">Create</button>
+						onclick="newTestCase()">Create</button>
 				</div>
 			</div>
 		</div>

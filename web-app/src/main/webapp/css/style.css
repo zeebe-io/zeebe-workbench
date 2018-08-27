@@ -57,7 +57,7 @@ html, body, #canvas, #canvas > div {
  @keyframes jump {
    50% { top: 50px; }
  }
- 
+
  .diagram-note {
    background-color: rgba(66, 180, 21, 0.7);
    color: White;
@@ -73,13 +73,9 @@ html, body, #canvas, #canvas > div {
  .diagram-marker:not(.djs-connection) .djs-visual > :nth-child(1) {
    stroke: rgba(66, 180, 21, 0.7) !important;
  }
- 
-html, body, #canvas {
-  height: 400px;
-}
 
 html, body, #testCases {
-  height: 750px;
+  height: 90%;
 }
 
 #testCases .entry {
@@ -87,11 +83,13 @@ html, body, #testCases {
 }
 
 #testCases .failed-test {
-   color: #ff000082;
+  color: white;
+  background-color: #ff000082;
 }
 
 #testCases .successful-test {
-   color: #0080008a;
+   color: white;
+   background-color: #0080008a;
 }
 
 #testCases .status {

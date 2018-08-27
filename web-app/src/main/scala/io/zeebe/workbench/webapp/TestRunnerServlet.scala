@@ -40,7 +40,7 @@ object TestRunnerServlet {
 
   case class FailedVerification(activityId: String,
                                 expectedPayload: String,
-                                actualPayLoad: String)
+                                actualPayload: String)
 
 }
 

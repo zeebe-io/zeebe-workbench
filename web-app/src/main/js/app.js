@@ -19,45 +19,24 @@ var testResults = [];
 
 var openOverlay = '';
 
-function createNewTestCase() {
-
+window.newTestCase = function() {
   const $name = document.getElementById("newTestName");
   const $resource = document.getElementById("newTestResource");
   const $startPayload = document.getElementById("startPayload");
 
   const $testCases = document.getElementById("testCases");
-  const $newTestCase = document.createElement("div");
+  const $tr = document.createElement("tr");
 
-  const $status = document.createElement("span");
-  const $testName = document.createElement("span");
-  const $runSingleTest = document.createElement("span");
-  const $removeTest = document.createElement("span");
+  $tr.innerHTML = "<td></td>" + // status
+                  "<td>" + $name.value + "</td>";
 
-  $newTestCase.testName = $name.value;
+  $tr.testName = $name.value;
 
-  $status.classList.add("col");
-  $status.classList.add("status");
 
-  $testName.innerHTML = $name.value;
-  $testName.classList.add("col");
-  $testName.classList.add("entry");
+  $("#testCases>tr.table-active").removeClass("table-active");
+  $tr.classList.add("table-active");
 
-  $runSingleTest.innerHTML = "▷";
-  $runSingleTest.classList.add("col");
-  $runSingleTest.classList.add("run-single-test");
-
-  $removeTest.innerHTML = "🗑";
-  $removeTest.classList.add("col");
-  $removeTest.classList.add("remove-test");
-
-  $("#testCases>div>span.active").removeClass("active");
-  $testName.classList.add("active");
-
-  $newTestCase.appendChild($status);
-  $newTestCase.appendChild($testName);
-  $newTestCase.appendChild($runSingleTest);
-  $newTestCase.appendChild($removeTest);
-  $testCases.appendChild($newTestCase);
+  $testCases.appendChild($tr);
 
   const newTest = {
       name : $name.value,
@@ -70,42 +49,13 @@ function createNewTestCase() {
   currentTest = newTest;
   tests.push(newTest);
 
-  $testName.addEventListener("click", () => {
+  $tr.addEventListener("click", () => {
 
-    $("#testCases>div>span.active").removeClass("active");
-    $testName.classList.add("active");
+    $("#testCases>tr.table-active").removeClass("table-active");
+    $tr.classList.add("table-active");
 
     currentTest = newTest;
     showTestCase(newTest);
-  });
-
-  $runSingleTest.addEventListener("click", () => {
-      $("#testCases>div>span.active").removeClass("active");
-      $testName.classList.add("active");
-
-      currentTest = newTest;
-      showTestCase(newTest);
-
-      runTestCases([newTest]);
-  });
-
-  $removeTest.addEventListener("click", () => {
-      const index = tests.indexOf(newTest);
-      tests.pop(index);
-
-      $testCases.removeChild($newTestCase);
-
-      if (tests.length > 0) {
-        currentTest = tests[0];
-        showTestCase(currentTest);
-      } else {
-        const $commands = document.getElementById("commands");
-        while ($commands.firstChild) {
-          $commands.removeChild($commands.firstChild);
-        }
-
-        viewer.detach();
-      }
   });
 
   var file = $resource.files[0];
@@ -133,9 +83,36 @@ function createNewTestCase() {
 
 }
 
+window.removeTestCase = function() {
+    const index = tests.indexOf(currentTest);
+    tests.pop(index);
 
-document.getElementById("createTestCaseButton")
-        .addEventListener("click", () => createNewTestCase());
+    const $testCases = document.getElementById("testCases");
+    const $tr = $testCases.childNodes[index];
+    $testCases.removeChild($tr);
+
+    if (tests.length > 0) {
+      const selectedTest = (index - 1) % tests.length;
+      currentTest = tests[selectedTest];
+
+      $testCases.childNodes[selectedTest].classList.add("table-active");
+      showTestCase(currentTest);
+    } else {
+      const $testName = document.getElementById("test-name");
+      $testName.innerHTML = "";
+
+      const $commands = document.getElementById("commands");
+      while ($commands.firstChild) {
+        $commands.removeChild($commands.firstChild);
+      }
+
+      viewer.detach();
+    }
+  }
+
+window.runSingleTest = function() {
+    runTestCases([currentTest]);
+}
 
 function showTestCase(testCase) {
 
@@ -271,9 +248,15 @@ function showTestCase(testCase) {
 
     renderTestCase(testCase);
   });
+
+  renderTestCase(testCase);
 }
 
 function renderTestCase(testCase) {
+
+  const $testName = document.getElementById("test-name");
+  $testName.innerHTML = testCase.name;
+
   const $commands = document.getElementById("commands");
 
   while ($commands.firstChild) {
@@ -281,37 +264,88 @@ function renderTestCase(testCase) {
   }
 
   if (testCase.startPayload) {
-    const $newCommand = document.createElement("div");
+    const $newCommand = document.createElement("li");
 
     $newCommand.innerHTML = "Create workflow instance with payload: " + testCase.startPayload;
+    $newCommand.classList.add("list-group-item");
     $commands.appendChild($newCommand);
   }
 
   testCase.commands.forEach(cmd => {
-    const $newCommand = document.createElement("div");
+    const $newCommand = document.createElement("li");
 
     $newCommand.innerHTML = "Complete Job '" + cmd.activityId + "' with payload: " + cmd.payload;
+    $newCommand.classList.add("list-group-item");
     $commands.appendChild($newCommand);
   });
 
   testCase.verifications.forEach(v => {
-    const $newVerification = document.createElement("div");
+    const $newVerification = document.createElement("li");
+
+    $newVerification.innerHTML = "Verify '" + v.activityId + "' is completed with payload: " + v.expectedPayload;
 
     if (window.testResults.filter(r => r.name == testCase.name).length > 0) {
       const result = window.testResults.filter(r => r.name == testCase.name)[0];
 
+      $newVerification.classList.remove("list-group-item-success");
+      $newVerification.classList.remove("list-group-item-danger");
+
       if (result.failedVerifications.filter(f => f.activityId == v.activityId).length > 0) {
 
-        $newVerification.classList.add("failed-test");
+        const failedVerification = result.failedVerifications.filter(f => f.activityId == v.activityId)[0];
+
+        $newVerification.classList.add("list-group-item-danger");
+
+        const $failures = document.createElement("ul");
+        const $failure = document.createElement("li");
+
+        if (failedVerification.actualPayload) {
+          $failure.innerHTML = "Payload was " + failedVerification.actualPayload;
+        } else {
+          $failure.innerHTML = "Activity was not completed";
+        }
+
+        $failures.appendChild($failure);
+        $newVerification.appendChild($failures);
+
+      } else {
+        $newVerification.classList.add("list-group-item-success");
       }
     }
 
-    $newVerification.innerHTML = "Verify '" + v.activityId + "' is completed with payload: " + v.expectedPayload;
+    $newVerification.classList.add("list-group-item");
     $commands.appendChild($newVerification);
   });
 }
 
+window.runAllTests = function () {
+  runTestCases(tests)
+}
+
 function runTestCases(tests) {
+
+  const $testRuns = document.getElementById("testRuns");
+  const $testFailures = document.getElementById("testFailures");
+
+  $testRuns.innerHTML = "0";
+  $testFailures.innerHTML = "0";
+
+  const $progressSuccess = document.getElementById("testResultProgressSuccess");
+  const $progressFailures = document.getElementById("testResultProgressFailures");
+
+  $progressSuccess.style.width = "100%";
+  $progressFailures.style.width = "0%";
+
+  $progressSuccess.classList.add("progress-bar-striped");
+  $progressSuccess.classList.add("progress-bar-animated");
+
+  document.getElementById("testCases").childNodes.forEach(c => {
+      const $status = c.firstChild;
+
+      $status.innerHTML = "";
+      $status.classList.remove("successful-test");
+      $status.classList.remove("failed-test");
+  });
 
   $.ajax({
         type : 'POST',
@@ -319,6 +353,9 @@ function runTestCases(tests) {
         data:  JSON.stringify(tests),
         contentType: 'application/json; charset=utf-8',
         success: function (result) {
+          $progressSuccess.classList.remove("progress-bar-striped");
+          $progressSuccess.classList.remove("progress-bar-animated");
+
         	showTestResults(result);
         },
         error: function (xhr, ajaxOptions, thrownError) {
@@ -328,9 +365,6 @@ function runTestCases(tests) {
      crossDomain: true,
 	});
 };
-
-document.getElementById("runTestsButton")
-        .addEventListener("click", () => runTestCases(tests));
 
 function showTestResults(results) {
   window.testResults = results;
@@ -355,10 +389,6 @@ function showTestResults(results) {
   document.getElementById("testCases").childNodes.forEach(c => {
       const testName = c.testName;
       const $status = c.firstChild;
-
-      $status.innerHTML = "";
-      $status.classList.remove("successful-test");
-      $status.classList.remove("failed-test");
 
       if (successfulTests.filter(t => t.name == testName).length == 1) {
         $status.innerHTML = "✓";
