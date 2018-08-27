@@ -63,15 +63,28 @@ html, body, #canvas, #canvas > div {
    color: White;
    border-radius: 5px;
    font-family: Arial;
-   font-size: 12px;
+   font-size: 14px;
    padding: 5px;
    /*min-height: 50px;*/
-   width: 150px;
+   width: 200px;
    text-align: center;
+ }
+
+ .diagram-note .note-title {
+   font-size: 16px;
+   text-align: center;
+ }
+
+ .diagram-note .note-content {
+   text-align: left;
  }
 
  .diagram-marker:not(.djs-connection) .djs-visual > :nth-child(1) {
    stroke: rgba(66, 180, 21, 0.7) !important;
+ }
+
+ .diagram-marker:not(.djs-connection) > button {
+   background-color: transparent;
  }
 
 html, body, #testCases {

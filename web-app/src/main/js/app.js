@@ -18,11 +18,13 @@ var currentTest = null;
 var testResults = [];
 
 var openOverlay = '';
+var noteActivityId = '';
+var isNoteCollapsed = true;
+var onCommandAdd = function (v) {};
 
 window.newTestCase = function() {
   const $name = document.getElementById("newTestName");
   const $resource = document.getElementById("newTestResource");
-  const $startPayload = document.getElementById("startPayload");
 
   const $testCases = document.getElementById("testCases");
   const $tr = document.createElement("tr");
@@ -41,7 +43,7 @@ window.newTestCase = function() {
   const newTest = {
       name : $name.value,
       resource : null,
-      startPayload: $startPayload.value,
+      startPayload: '{}',
       commands: [],
       verifications: []
   };
@@ -79,8 +81,6 @@ window.newTestCase = function() {
                 showTestCase(newTest);
 	};
   reader.readAsArrayBuffer(file);
-
-
 }
 
 window.removeTestCase = function() {
@@ -116,6 +116,10 @@ window.runSingleTest = function() {
 
 function showTestCase(testCase) {
 
+  openOverlay = '';
+  noteActivityId = '';
+  isNoteCollapsed = true;
+
   viewer.importXML(testCase.resource.xml, function(err) {
 
    if (!err) {
@@ -125,132 +129,26 @@ function showTestCase(testCase) {
       console.log('something went wrong:', err);
     }
 
-    const canvas = viewer.get("canvas"),
-          elementRegistry = viewer.get("elementRegistry"),
-          animation = viewer.get("animation"),
-          tokenCount = viewer.get("tokenCount"),
-          eventBus = viewer.get("eventBus"),
-          overlays = viewer.get("overlays");
-
-    window.elementRegistry = elementRegistry;
-    window.tokenCount = tokenCount;
-
     canvas.zoom('fit-viewport');
-
-    eventBus.on("element.hover", function(e) {
-
-      const activityId = e.element.id;
-      const activityType = e.element.type;
-
-
-      if (activityType == "bpmn:ServiceTask" || activityType == "bpmn:StartEvent" || activityType == "bpmn:EndEvent") {
-        canvas.addMarker(activityId, 'diagram-marker');
-      }
-    });
-
-    eventBus.on("element.out", function(e) {
-
-      const activityId = e.element.id;
-      const activityType = e.element.type;
-
-      canvas.removeMarker(activityId, 'diagram-marker');
-    });
-
-
-
-    eventBus.on("element.click", function(e) {
-      // e.element = the model element
-      // e.gfx = the graphical element
-
-      if (openOverlay != '') {
-        overlays.remove(openOverlay);
-      }
-
-      const activityId = e.element.id;
-      const activityName = e.element.businessObject.name;
-      const activityType = e.element.type;
-
-      const showOverlay = function(activityId, title, payload, onClick) {
-
-        var overlayHtml = $('<div class="diagram-note row">'+
-        '<div class="col"><p class="col">' + title + '</p></div>' +
-        '<div class="col"><textarea id="command-payload" class="form-control col">' + payload + '</textarea></div>' +
-        '<div class="col"><button type="button" class="btn btn-light" id="addCommandButton">Done</button></div>' +
-        '</div>');
-
-        // attach the overlayHtml to a node
-        openOverlay = overlays.add(activityId, {
-          position: {
-            bottom: 0,
-            right: 0
-          },
-          html: overlayHtml
-        });
-
-        document.getElementById("addCommandButton")
-                .addEventListener("click",() => {
-
-                  const $payload = document.getElementById("command-payload");
-                  onClick($payload.value);
-
-                  overlays.remove(openOverlay);
-                  openOverlay = '';
-                });
-      }
-
-      if (activityType == "bpmn:ServiceTask") {
-
-        var command = null;
-        if (testCase.commands.filter(c => c.activityId == activityId).length > 0) {
-          command = testCase.commands.filter(c => c.activityId == activityId)[0];
-        } else {
-          command = {
-            activityId: activityId,
-            payload: "{}"
-          };
-          testCase.commands.push(command);
-        }
-
-        showOverlay(activityId, "Complete with payload:", command.payload, payload => {
-          command.payload = payload;
-
-          renderTestCase(currentTest);
-        });
-
-      } else if (activityType == "bpmn:StartEvent") {
-
-        showOverlay(activityId, "Create instance with payload:", currentTest.startPayload, payload => {
-          testCase.startPayload = payload;
-          renderTestCase(currentTest);
-        });
-
-      } else if (activityType == "bpmn:EndEvent") {
-
-        var verification = null;
-        if (testCase.verifications.filter(v => v.activityId == activityId).length > 0) {
-          verification = testCase.verifications.filter(v => v.activityId == activityId)[0];
-        } else {
-          verification = {
-            activityId: activityId,
-            expectedPayload: "{}",
-            expectedIntent: "END_EVENT_OCCURRED"
-          };
-          testCase.verifications.push(verification);
-        }
-
-      showOverlay(activityId, "Verify completed with payload:", verification.expectedPayload, payload => {
-        verification.expectedPayload = payload;
-        renderTestCase(currentTest);
-      });
-    }
-
-    });
 
     renderTestCase(testCase);
   });
-
-  renderTestCase(testCase);
 }
+
+window.closeNoteOverlay = function () {
+  if (openOverlay != '') {
+    overlays.remove(openOverlay);
+    openOverlay = '';
+    isNoteCollapsed = true;
+  }
+};
+
+window.addCommand = function () {
+  const newPayload = document.getElementById("command-payload").value;
+  onCommandAdd(newPayload);
+
+  closeNoteOverlay();
+};
 
 function renderTestCase(testCase) {
 
@@ -266,7 +164,7 @@ function renderTestCase(testCase) {
   if (testCase.startPayload) {
     const $newCommand = document.createElement("li");
 
-    $newCommand.innerHTML = "Create workflow instance with payload: " + testCase.startPayload;
+    $newCommand.innerHTML = "✎ Create workflow instance with payload: " + testCase.startPayload;
     $newCommand.classList.add("list-group-item");
     $commands.appendChild($newCommand);
   }
@@ -274,7 +172,7 @@ function renderTestCase(testCase) {
   testCase.commands.forEach(cmd => {
     const $newCommand = document.createElement("li");
 
-    $newCommand.innerHTML = "Complete Job '" + cmd.activityId + "' with payload: " + cmd.payload;
+    $newCommand.innerHTML = "✎ Complete Job '" + cmd.activityId + "' with payload: " + cmd.payload;
     $newCommand.classList.add("list-group-item");
     $commands.appendChild($newCommand);
   });
@@ -282,7 +180,7 @@ function renderTestCase(testCase) {
   testCase.verifications.forEach(v => {
     const $newVerification = document.createElement("li");
 
-    $newVerification.innerHTML = "Verify '" + v.activityId + "' is completed with payload: " + v.expectedPayload;
+    $newVerification.innerHTML = "☑ Verify '" + v.activityId + "' is completed with payload: " + v.expectedPayload;
 
     if (window.testResults.filter(r => r.name == testCase.name).length > 0) {
       const result = window.testResults.filter(r => r.name == testCase.name)[0];
@@ -427,6 +325,183 @@ var viewer = new BpmnViewer({
   ]
 });
 
+const canvas = viewer.get("canvas"),
+      elementRegistry = viewer.get("elementRegistry"),
+      animation = viewer.get("animation"),
+      tokenCount = viewer.get("tokenCount"),
+      eventBus = viewer.get("eventBus"),
+      overlays = viewer.get("overlays");
+
 window.viewer = viewer;
+window.canvas = canvas;
+window.elementRegistry = elementRegistry;
+window.tokenCount = tokenCount;
+window.overlays = overlays;
+
+eventBus.on("element.hover", function(e) {
+
+  if (!isNoteCollapsed) {
+    // is on editing mode
+    return;
+  }
+
+  const activityId = e.element.id;
+  const activityType = e.element.type;
+
+  noteActivityId = activityId;
+  isNoteCollapsed = true;
+
+  const showDialogNote = function (note, payload, callback) {
+    onCommandAdd = callback;
+
+    const content = '<div class="diagram-note">' +
+                          '<div class="container">' +
+                            '<div class="row border-bottom">' +
+                              '<div class="col-sm note-title">' +
+                                activityId +
+                              '</div>' +
+                            '</div>' +
+                            '<div class="row note-content">' +
+                              '<div class="col-sm">' +
+                                note +
+                              '</div>' +
+                            '</div>' +
+                            '<div id="note-payload" class="row collapse">' +
+                              '<div class="row">' +
+                                '<div class="col-sm">' +
+                                  '<textarea id="command-payload" class="form-control">' + payload + '</textarea>' +
+                                '</div>' +
+                              '</div>' +
+                              '<div class="row">' +
+                                '<div class="col">' +
+                                  '<button class="btn btn-outline-light" onClick="closeNoteOverlay()">Cancel</button>' +
+                                '</div>' +
+                                '<div class="col">' +
+                                  '<button class="btn btn-outline-light" onClick="addCommand()">Add</button>' +
+                                '</div>' +
+                              '</div>' +
+                            '</div>' +
+                          '</div>' +
+                        '</div>';
+
+    openOverlay = overlays.add(activityId, {
+      position: {
+        bottom: 10,
+        right: 10
+      },
+      html: content
+    });
+  }
+
+  if (activityType == "bpmn:StartEvent") {
+    showDialogNote('✎ Set start payload', currentTest.startPayload, payload => {
+      currentTest.startPayload = payload;
+      renderTestCase(currentTest);
+    });
+  } else if (activityType == "bpmn:ServiceTask") {
+
+    var command = null;
+    var isNew = false;
+    if (currentTest.commands.filter(c => c.activityId == activityId).length > 0) {
+      command = currentTest.commands.filter(c => c.activityId == activityId)[0];
+    } else {
+      command = {
+        activityId: activityId,
+        payload: "{}"
+      };
+      isNew = true;
+    }
+
+    showDialogNote('✎ Complete job', command.payload, payload => {
+      command.payload = payload;
+      if (isNew) {
+        currentTest.commands.push(command);
+      }
+
+      renderTestCase(currentTest);
+    });
+  } else if (activityType == "bpmn:EndEvent") {
+
+    var verification = null;
+    var isNew = false;
+    if (currentTest.verifications.filter(v => v.activityId == activityId).length > 0) {
+      verification = currentTest.verifications.filter(v => v.activityId == activityId)[0];
+    } else {
+      verification = {
+        activityId: activityId,
+        expectedPayload: "{}",
+        expectedIntent: "END_EVENT_OCCURRED"
+      };
+      isNew = true;
+    }
+
+    showDialogNote('☑ Verify occurred', verification.expectedPayload, payload => {
+      verification.expectedPayload = payload;
+      if (isNew) {
+        currentTest.verifications.push(verification);
+      }
+
+      renderTestCase(currentTest);
+    });
+  } else if (activityType == "bpmn:SequenceFlow") {
+
+    var verification = null;
+    var isNew = false;
+    if (currentTest.verifications.filter(v => v.activityId == activityId).length > 0) {
+      verification = currentTest.verifications.filter(v => v.activityId == activityId)[0];
+    } else {
+      verification = {
+        activityId: activityId,
+        expectedPayload: "{}",
+        expectedIntent: "SEQUENCE_FLOW_TAKEN"
+      };
+      isNew = true;
+    }
+
+    showDialogNote('☑ Verify taken', verification.expectedPayload, payload => {
+      verification.expectedPayload = payload;
+      if (isNew) {
+        currentTest.verifications.push(verification);
+      }
+
+      renderTestCase(currentTest);
+    });
+  }
+});
+
+eventBus.on("element.out", function(e) {
+
+  const activityId = e.element.id;
+  const activityType = e.element.type;
+
+  if (openOverlay != '' && isNoteCollapsed) {
+    overlays.remove(openOverlay);
+    openOverlay = '';
+  }
+});
+
+eventBus.on("element.click", function(e) {
+
+  const activityId = e.element.id;
+  const activityName = e.element.businessObject.name;
+  const activityType = e.element.type;
+
+  if (openOverlay != '') {
+    if (isNoteCollapsed) {
+      isNoteCollapsed = false;
+      document.getElementById("note-payload").classList.remove("collapse");
+    } else {
+      isNoteCollapsed = true;
+      document.getElementById("note-payload").classList.add("collapse");
+
+      if (noteActivityId != activityId) {
+        overlays.remove(openOverlay);
+        openOverlay = '';
+      }
+    }
+  }
+
+});
+
 window.tests = tests;
 window.testResults = testResults;
