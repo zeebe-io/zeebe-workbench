@@ -1,0 +1,102 @@
+[{
+  "name": "test",
+  "resourceName": "orderProcess.bpmn",
+  "startPayload": {},
+  "commands": [
+    {
+      "activityId": "collect-money",
+      "payload": {}
+    },
+    {
+      "activityId": "fetch-items",
+      "payload": {}
+    },
+    {
+      "activityId": "ship-parcel",
+      "payload": {
+        "foo": "bar"
+      }
+    }
+  ],
+  "verifications": [
+    {
+      "expectedIntent": "ELEMENT_COMPLETED",
+      "expectedPayload": {},
+      "activityId": "order-process"
+    }
+  ]
+},
+{
+  "name": "test1",
+  "resourceName": "orderProcess.bpmn",
+  "startPayload": {},
+  "commands": [
+    {
+      "activityId": "collect-money",
+      "payload": {}
+    },
+    {
+      "activityId": "fetch-items",
+      "payload": {}
+    },
+    {
+      "activityId": "ship-parcel",
+      "payload": {}
+    }
+  ],
+  "verifications": [
+    {
+      "expectedIntent": "ELEMENT_COMPLETED",
+      "expectedPayload": {},
+      "activityId": "order-process"
+    }
+  ]
+},
+{
+  "name": "test2",
+  "resourceName": "orderProcess.bpmn",
+  "startPayload": {},
+  "commands": [
+    {
+      "activityId": "collect-money",
+      "payload": {}
+    },
+    {
+      "activityId": "ship-parcel",
+      "payload": {}
+    }
+  ],
+  "verifications": [
+    {
+      "expectedIntent": "ELEMENT_COMPLETED",
+      "expectedPayload": {},
+      "activityId": "order-process"
+    }
+  ]
+},
+{
+  "name": "test3",
+  "resourceName": "orderProcess.bpmn",
+  "startPayload": {},
+  "commands": [
+    {
+      "activityId": "collect-money",
+      "payload": {}
+    },
+    {
+      "activityId": "fetch-items",
+      "payload": {}
+    },
+    {
+      "activityId": "ship-parcel",
+      "payload": {}
+    }
+  ],
+  "verifications": [
+    {
+      "expectedIntent": "ELEMENT_COMPLETED",
+      "expectedPayload": {},
+      "activityId": "order-process"
+    }
+  ]
+}]

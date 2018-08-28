@@ -17,6 +17,7 @@ package io.zeebe.workbench;
  */
 
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.zeebe.workbench.impl.TestRunner;
 import org.apache.maven.plugin.AbstractMojo;
@@ -33,118 +34,118 @@ import java.util.List;
 @Mojo(name = "runner", defaultPhase = LifecyclePhase.TEST)
 public class RunnerMojo extends AbstractMojo {
 
-  private final ObjectMapper mapper = new ObjectMapper();
-  private final List<WorkflowResource> workflowResources = new ArrayList<>();
-  private final List<TestCase> testCases = new ArrayList<>();
+	private static final TypeReference<List<TestCase>> TEST_CASES_TYPE_REF = new TypeReference<List<TestCase>>() {
+	};
 
-  private final StringBuilder logBuilder = new StringBuilder();
-  private final List<FailedVerification> globalFailedVerifications = new ArrayList<>();
+	private final ObjectMapper mapper = new ObjectMapper();
+	private final List<WorkflowResource> workflowResources = new ArrayList<>();
+	private final List<TestCase> testCases = new ArrayList<>();
 
-  public RunnerMojo() {
-    mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+	private final StringBuilder logBuilder = new StringBuilder();
+	private final List<FailedVerification> globalFailedVerifications = new ArrayList<>();
 
-    logBuilder
-        .append("\n\n\u001b[97m-------------------------------------------------------")
-        .append("\n\t\tZ E E B E - T E S T S\n")
-        .append("-------------------------------------------------------");
-  }
+	public RunnerMojo() {
+		mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
 
-  @Parameter(property = "resourcesDir", required = true)
-  private File resourcesDir;
+		logBuilder.append("\n\n\u001b[97m-------------------------------------------------------")
+				.append("\n\t\tZ E E B E - T E S T S\n")
+				.append("-------------------------------------------------------");
+	}
 
-  @Parameter(property = "outputDir", defaultValue = "${project.build.target}")
-  private File outputDir;
+	@Parameter(property = "resourcesDir", required = true)
+	private File resourcesDir;
 
-  public void execute() throws MojoExecutionException {
-    System.setProperty("org.slf4j.simpleLogger.log.io.zeebe", "error");
-    System.setProperty("org.slf4j.simpleLogger.log.io.zeebe.workbench", "info");
+	@Parameter(property = "outputDir", defaultValue = "${project.build.target}")
+	private File outputDir;
 
-    if (resourcesDir != null && resourcesDir.isDirectory()) {
-      final File[] files = resourcesDir.listFiles();
-      if (files != null && files.length > 0) {
-        readResources(files);
+	public void execute() throws MojoExecutionException {
+		System.setProperty("org.slf4j.simpleLogger.log.io.zeebe", "error");
+		System.setProperty("org.slf4j.simpleLogger.log.io.zeebe.workbench", "info");
 
-        if (!testCases.isEmpty()) {
-          try (final TestRunner testRunner = new TestRunner()) {
-            final List<TestResult> testResults = testRunner.run(workflowResources, testCases);
+		if (resourcesDir != null && resourcesDir.isDirectory()) {
+			final File[] files = resourcesDir.listFiles();
+			if (files != null && files.length > 0) {
+				readResources(files);
 
-            for (TestResult result : testResults) {
-              final File resultFile = new File(outputDir, result.getName() + ".result");
-              mapper.writeValue(resultFile, result);
+				if (!testCases.isEmpty()) {
+					try (final TestRunner testRunner = new TestRunner()) {
+						final List<TestResult> testResults = testRunner.run(workflowResources, testCases);
 
-              logResult(result);
-            }
+						for (TestResult result : testResults) {
+							final File resultFile = new File(outputDir, result.getName() + ".result");
+							mapper.writeValue(resultFile, result);
 
-          } catch (Exception ex) {
-            throw new MojoExecutionException("Problem in test case execution.", ex);
-          }
+							logResult(result);
+						}
 
-          logBuilder.append("\u001b[0m");
+					} catch (Exception ex) {
+						throw new MojoExecutionException("Problem in test case execution.", ex);
+					}
 
-          logBuilder.append("\n\n\u001b[97mResults:\n\n");
-          final String resultLog = "Tests run: %d failed: %d";
-          final int failedCount = globalFailedVerifications.size();
-          logBuilder.append(String.format(resultLog, testCases.size(), failedCount));
+					logBuilder.append("\u001b[0m");
 
-          // reset
-          logBuilder.append("\u001b[0m");
-          getLog().info(logBuilder.toString());
+					logBuilder.append("\n\n\u001b[97mResults:\n\n");
+					final String resultLog = "Tests run: %d failed: %d";
+					final int failedCount = globalFailedVerifications.size();
+					logBuilder.append(String.format(resultLog, testCases.size(), failedCount));
 
-          if (failedCount > 0) {
-            throw new MojoExecutionException("There was " + failedCount + " failing test cases.");
-          }
-        }
-      }
-    } else {
-      throw new MojoExecutionException("Property 'resourcesDir' need to be a directory.");
-    }
-  }
+					// reset
+					logBuilder.append("\u001b[0m");
+					getLog().info(logBuilder.toString());
 
-  private void logResult(TestResult result) throws MojoExecutionException {
+					if (failedCount > 0) {
+						throw new MojoExecutionException("There was " + failedCount + " failing test cases.");
+					}
+				}
+			}
+		} else {
+			throw new MojoExecutionException("Property 'resourcesDir' need to be a directory.");
+		}
+	}
 
-    final List<FailedVerification> failedVerifications = result.getFailedVerifications();
-    if (failedVerifications.isEmpty()) {
-      logBuilder.append("\n\u001b[92mTest case '").append(result.getName()).append("' successful.");
-    } else {
-      logBuilder.append("\n\u001b[91mTest case '").append(result.getName()).append("' failed.");
-      for (FailedVerification failedVerification : failedVerifications) {
-        logBuilder.append("\n\tFailed verification: ");
-        final String actualPayLoad = failedVerification.getActualPayLoad();
-        final Verification verification = failedVerification.getVerification();
-        if (actualPayLoad != null) {
-          final String payloadLog = "Payload '%s' is not equal to expected payload '%s'.";
-          logBuilder.append(
-              String.format(payloadLog, actualPayLoad, verification.getExpectedPayload()));
-        } else {
-          final String verificationLog = "Expected state '%s' of activity '%s' was not reached.";
-          logBuilder.append(
-              String.format(
-                  verificationLog, verification.getExpectedIntent(), verification.getActivityId()));
-        }
-      }
-      this.globalFailedVerifications.addAll(failedVerifications);
-    }
-  }
+	private void logResult(TestResult result) throws MojoExecutionException {
 
-  private void readResources(File[] files) throws MojoExecutionException {
-    for (File file : files) {
-      try {
-        if (file.getName().contains(".bpmn")) {
+		final List<FailedVerification> failedVerifications = result.getFailedVerifications();
+		if (failedVerifications.isEmpty()) {
+			logBuilder.append("\n\u001b[92mTest case '").append(result.getName()).append("' successful.");
+		} else {
+			logBuilder.append("\n\u001b[91mTest case '").append(result.getName()).append("' failed.");
+			for (FailedVerification failedVerification : failedVerifications) {
+				logBuilder.append("\n\tFailed verification: ");
+				final String actualPayLoad = failedVerification.getActualPayLoad();
+				final Verification verification = failedVerification.getVerification();
+				if (actualPayLoad != null) {
+					final String payloadLog = "Payload '%s' is not equal to expected payload '%s'.";
+					logBuilder.append(String.format(payloadLog, actualPayLoad, verification.getExpectedPayload()));
+				} else {
+					final String verificationLog = "Expected state '%s' of activity '%s' was not reached.";
+					logBuilder.append(String.format(verificationLog, verification.getExpectedIntent(),
+							verification.getActivityId()));
+				}
+			}
+			this.globalFailedVerifications.addAll(failedVerifications);
+		}
+	}
 
-          getLog().debug("Read workflow resource");
-          final byte[] bytes = Files.readAllBytes(file.toPath());
-          final WorkflowResource resource = new WorkflowResource(bytes, file.getName());
-          workflowResources.add(resource);
+	private void readResources(File[] files) throws MojoExecutionException {
+		for (File file : files) {
+			try {
+				if (file.getName().contains(".bpmn")) {
 
-        } else if (file.getName().contains(".case")) {
+					getLog().debug("Read workflow resource");
+					final byte[] bytes = Files.readAllBytes(file.toPath());
+					final WorkflowResource resource = new WorkflowResource(bytes, file.getName());
+					workflowResources.add(resource);
 
-          getLog().debug("Read test case");
-          final TestCase testCase = mapper.readValue(file, TestCase.class);
-          testCases.add(testCase);
-        }
-      } catch (Exception ex) {
-        throw new MojoExecutionException("Failed to open file: " + file.getName(), ex);
-      }
-    }
-  }
+				} else if (file.getName().contains(".zb")) {
+
+					getLog().debug("Read test case");
+					final List<TestCase> tests = mapper.readValue(file, TEST_CASES_TYPE_REF);
+					this.testCases.addAll(tests);
+				}
+			} catch (Exception ex) {
+				throw new MojoExecutionException("Failed to open file: " + file.getName(), ex);
+			}
+		}
+	}
 }
