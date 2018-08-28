@@ -1,6 +1,3 @@
-// we use stringify to inline an example XML document
-import diagram from '../resources/orderProcess.bpmn';
-
 //make sure you added bpmn-js to your your project
 //dependencies via npm install --save bpmn-js
 import BpmnViewer from 'bpmn-js/lib/NavigatedViewer';
@@ -14,6 +11,8 @@ import $ from "jquery";
 // --- functions
 
 var tests = [];
+var testResources = [];
+
 var currentTest = null;
 var testResults = [];
 
@@ -26,61 +25,88 @@ window.newTestCase = function() {
   const $name = document.getElementById("newTestName");
   const $resource = document.getElementById("newTestResource");
 
-  const $testCases = document.getElementById("testCases");
-  const $tr = document.createElement("tr");
+  readFiles($resource.files, r => {
+    const fileName = r[0].file.name;
+    const binary = r[0].binary;
 
-  $tr.innerHTML = "<td></td>" + // status
-                  "<td>" + $name.value + "</td>";
+    if (testResources.filter(r => r.name == fileName).length == 0) {
+      testResources.push({
+        name: fileName,
+        xml: binary
+      });
+    }
 
-  $tr.testName = $name.value;
-
-
-  $("#testCases>tr.table-active").removeClass("table-active");
-  $tr.classList.add("table-active");
-
-  $testCases.appendChild($tr);
-
-  const newTest = {
-      name : $name.value,
-      resource : null,
-      startPayload: '{}',
-      commands: [],
-      verifications: []
-  };
-
-  currentTest = newTest;
-  tests.push(newTest);
-
-  $tr.addEventListener("click", () => {
-
-    $("#testCases>tr.table-active").removeClass("table-active");
-    $tr.classList.add("table-active");
+    const newTest = {
+        name : $name.value,
+        resourceName : fileName,
+        startPayload: '{}',
+        commands: [],
+        verifications: []
+    };
 
     currentTest = newTest;
+    tests.push(newTest);
+
+    addTestCase(newTest);
     showTestCase(newTest);
   });
+}
 
-  var file = $resource.files[0];
-  var reader = new FileReader();
-  reader.onload = function(e) {
+function renderTestCases(tests) {
+  tests.forEach(addTestCase);
+}
 
-		            var binary = '';
-		            var bytes = new Uint8Array( e.target.result );
-		            var len = bytes.byteLength;
-		            for (var j = 0; j < len; j++) {
-		                binary += String.fromCharCode( bytes[ j ] );
-		            }
+function addTestCase(testCase) {
 
-                currentTest.resource = {
-                  name: file.name,
-                  xml: binary,
-		            	content:  btoa(binary)
-                };
+  const $testCases = document.getElementById("testCases");
 
+  while ($testCases.firstChild) {
+    $testCases.removeChild($testCases.firstChild);
+  }
 
-                showTestCase(newTest);
-	};
-  reader.readAsArrayBuffer(file);
+  tests.forEach(testCase => {
+    const $tr = document.createElement("tr");
+
+    $tr.innerHTML = "<td></td>" + // status
+                    "<td>" + testCase.name + "</td>";
+
+    $tr.testName = testCase.name;
+    $testCases.appendChild($tr);
+
+    $tr.addEventListener("click", () => {
+      currentTest = testCase;
+      showTestCase(testCase);
+    });
+  });
+}
+
+function readFiles(files, onRead) {
+
+  var result = [];
+
+  if(typeof FileReader === 'function' && files.length > 0) {
+		for (var index = 0; index < files.length; ++index) {
+
+      const file = files[index];
+
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var binary = '';
+        var bytes = new Uint8Array( e.target.result );
+        var len = bytes.byteLength;
+        for (var j = 0; j < len; j++) {
+            binary += String.fromCharCode( bytes[ j ] );
+        }
+
+        result.push({file, binary});
+
+        if (result.length == files.length) {
+          onRead(result);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  }
 }
 
 window.removeTestCase = function() {
@@ -95,7 +121,6 @@ window.removeTestCase = function() {
       const selectedTest = (index - 1) % tests.length;
       currentTest = tests[selectedTest];
 
-      $testCases.childNodes[selectedTest].classList.add("table-active");
       showTestCase(currentTest);
     } else {
       const $testName = document.getElementById("test-name");
@@ -116,11 +141,20 @@ window.runSingleTest = function() {
 
 function showTestCase(testCase) {
 
+  const selectedTest = tests.indexOf(testCase);
+
+  const $testCases = document.getElementById("testCases");
+  $testCases.childNodes.forEach(c => c.classList.remove("table-active"));
+
+  $testCases.childNodes[selectedTest].classList.add("table-active");
+
   openOverlay = '';
   noteActivityId = '';
   isNoteCollapsed = true;
 
-  viewer.importXML(testCase.resource.xml, function(err) {
+  const resource = testResources.filter(r => r.name == testCase.resourceName)[0];
+
+  viewer.importXML(resource.xml, function(err) {
 
    if (!err) {
       viewer.attachTo(document.getElementById("canvas"));
@@ -182,8 +216,8 @@ function renderTestCase(testCase) {
 
     $newVerification.innerHTML = "☑ Verify '" + v.activityId + "' is completed with payload: " + v.expectedPayload;
 
-    if (window.testResults.filter(r => r.name == testCase.name).length > 0) {
-      const result = window.testResults.filter(r => r.name == testCase.name)[0];
+    if (testResults.filter(r => r.name == testCase.name).length > 0) {
+      const result = testResults.filter(r => r.name == testCase.name)[0];
 
       $newVerification.classList.remove("list-group-item-success");
       $newVerification.classList.remove("list-group-item-danger");
@@ -248,7 +282,7 @@ function runTestCases(tests) {
   $.ajax({
         type : 'POST',
         url: '/run',
-        data:  JSON.stringify(tests),
+        data:  JSON.stringify({'tests': tests, 'resources': testResources}),
         contentType: 'application/json; charset=utf-8',
         success: function (result) {
           $progressSuccess.classList.remove("progress-bar-striped");
@@ -265,7 +299,7 @@ function runTestCases(tests) {
 };
 
 function showTestResults(results) {
-  window.testResults = results;
+  testResults = results;
 
   const $testRuns = document.getElementById("testRuns");
   const $testFailures = document.getElementById("testFailures");
@@ -503,5 +537,68 @@ eventBus.on("element.click", function(e) {
 
 });
 
-window.tests = tests;
-window.testResults = testResults;
+window.exportTests = function () {
+  $.ajax({
+        type : 'POST',
+        url: '/export',
+        data:  JSON.stringify({'tests': tests, 'resources': testResources}),
+        contentType: 'application/json; charset=utf-8',
+        success: function (result) {
+          const $downloadButton = document.getElementById("download-button");
+          $downloadButton.classList.remove("disabled");
+        },
+        error: function (xhr, ajaxOptions, thrownError) {
+       	 console.log("failed to export tests: " + thrownError);
+        },
+   	 timeout: 5000,
+     crossDomain: true,
+	});
+}
+
+window.importTestCases = function () {
+  const $importTestCases = document.getElementById("importTestCases");
+  const $importTestResources = document.getElementById("importTestResources");
+
+  readFiles($importTestCases.files, r => {
+    const importedTests = JSON.parse(r[0].binary);
+
+    const resourceNames = importedTests.map(t => t.resourceName);
+
+    readFiles($importTestResources.files, rs => {
+      const importedResources = rs.map(function (r) {
+        return {
+          name: r.file.name,
+          xml: r.binary,
+        };
+      });
+
+      var missingResources = resourceNames.filter(r => importedResources.filter(i => i.name == r).length == 0);
+      if (missingResources.length > 0) {
+        console.log("export failed. missing resources: " + missingResources);
+      } else {
+        importedTests.forEach(i => tests.push(i));
+
+        importedResources.forEach(i => {
+          if (testResources.filter(t => t.name == i.name).length == 0) {
+            testResources.push(i);
+          }
+        });
+
+        renderTestCases(tests);
+
+        if (tests.length > 0) {
+          showTestCase(tests[0]);
+        }
+      }
+    });
+  })
+}
+
+window.clear = function () {
+  const $testsToExport = document.getElementById("testsToExport");
+  $testsToExport.value = '';
+}
+
+window._tests = tests;
+window._testResults = testResults;
+window._testResources = testResources;
