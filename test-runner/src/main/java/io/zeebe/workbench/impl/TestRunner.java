@@ -4,9 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.zeebe.broker.Broker;
 import io.zeebe.broker.system.configuration.BrokerCfg;
-import io.zeebe.broker.system.configuration.TopicCfg;
 import io.zeebe.gateway.ZeebeClient;
-import io.zeebe.gateway.api.clients.TopicClient;
 import io.zeebe.gateway.api.events.WorkflowInstanceEvent;
 import io.zeebe.gateway.api.events.WorkflowInstanceState;
 import io.zeebe.gateway.api.subscription.JobWorker;
@@ -16,8 +14,6 @@ import io.zeebe.model.bpmn.BpmnModelInstance;
 import io.zeebe.model.bpmn.instance.Process;
 import io.zeebe.model.bpmn.instance.ServiceTask;
 import io.zeebe.model.bpmn.instance.zeebe.ZeebeTaskDefinition;
-import io.zeebe.protocol.Protocol;
-import io.zeebe.util.sched.clock.ActorClock;
 import io.zeebe.workbench.*;
 import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 
@@ -42,7 +38,6 @@ public class TestRunner implements Runner, AutoCloseable {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final ZeebeClient zeebeClient = ZeebeClient.newClient();
-  private final TopicClient topicClient;
 
   private final HashMap<String, WorkflowResource> deployedResources = new HashMap<>();
 
@@ -50,17 +45,10 @@ public class TestRunner implements Runner, AutoCloseable {
     try {
       tempFolder = Files.createTempDirectory("zeebe").toAbsolutePath().normalize().toString();
       BrokerCfg cfg = new BrokerCfg();
-      final TopicCfg defaultTopic = new TopicCfg();
-      defaultTopic.setName(Protocol.DEFAULT_TOPIC);
-      defaultTopic.setPartitions(1);
-      defaultTopic.setReplicationFactor(1);
-      cfg.getTopics().add(defaultTopic);
-      cfg.setBootstrap(1);
-      broker = new Broker(cfg, tempFolder, (ActorClock) null);
+      broker = new Broker(cfg, tempFolder, null);
     } catch (Exception ex) {
       throw new IllegalStateException("Broker start does not work.");
     }
-    topicClient = zeebeClient.topicClient();
   }
 
   @Override
@@ -79,7 +67,7 @@ public class TestRunner implements Runner, AutoCloseable {
     for (WorkflowResource resource : resources) {
       deployedResources.put(resource.getName(), resource);
 
-      topicClient
+      zeebeClient
           .workflowClient()
           .newDeployCommand()
           .addResourceBytes(resource.getResource(), resource.getName())
@@ -117,7 +105,7 @@ public class TestRunner implements Runner, AutoCloseable {
     final String startPayload = testCase.getStartPayload();
 
     final WorkflowInstanceEvent workflowInstanceEvent =
-        topicClient
+        zeebeClient
             .workflowClient()
             .newCreateInstanceCommand()
             .bpmnProcessId(bpmnProcessId)
@@ -163,7 +151,7 @@ public class TestRunner implements Runner, AutoCloseable {
     TopicSubscription subscription = null;
     try {
       subscription =
-          topicClient
+          zeebeClient
               .newSubscription()
               .name(testCase.getName())
               .workflowInstanceEventHandler(
@@ -261,7 +249,7 @@ public class TestRunner implements Runner, AutoCloseable {
     JobWorker jobWorker = null;
     try {
       jobWorker =
-          topicClient
+          zeebeClient
               .jobClient()
               .newWorker()
               .jobType(taskType)

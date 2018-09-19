@@ -1,7 +1,6 @@
 package io.zeebe.workbench.impl;
 
 import io.zeebe.gateway.ZeebeClient;
-import io.zeebe.gateway.api.clients.TopicClient;
 import io.zeebe.gateway.api.commands.WorkflowInstanceCommand;
 import io.zeebe.gateway.api.commands.WorkflowInstanceCommandName;
 import io.zeebe.gateway.api.events.WorkflowInstanceEvent;
@@ -58,8 +57,7 @@ public class StartWorkflowInstanceTest {
     final List<WorkflowInstanceCommand> commands = new CopyOnWriteArrayList<>();
 
     final ZeebeClient zeebeClient = ZeebeClient.newClient();
-    final TopicClient topicClient = zeebeClient.topicClient();
-    topicClient
+    zeebeClient
         .newSubscription()
         .name("subscription")
         .workflowInstanceEventHandler(
@@ -107,8 +105,7 @@ public class StartWorkflowInstanceTest {
     final List<WorkflowInstanceEvent> events = new CopyOnWriteArrayList<>();
 
     final ZeebeClient zeebeClient = ZeebeClient.newClient();
-    final TopicClient topicClient = zeebeClient.topicClient();
-    topicClient
+    zeebeClient
         .newSubscription()
         .name("subscription1")
         .workflowInstanceEventHandler(

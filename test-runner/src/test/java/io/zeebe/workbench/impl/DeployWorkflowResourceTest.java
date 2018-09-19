@@ -47,7 +47,6 @@ public class DeployWorkflowResourceTest {
     final ZeebeClient zeebeClient = ZeebeClient.newClient();
     final io.zeebe.gateway.api.commands.WorkflowResource resource =
         zeebeClient
-            .topicClient()
             .workflowClient()
             .newResourceRequest()
             .bpmnProcessId("PROCESS")
